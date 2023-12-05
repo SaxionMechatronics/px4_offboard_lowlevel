@@ -12,7 +12,7 @@ mkdir -p ~/llc/llc_ws/src
 ### 1.2. Clone the package
 ```bash
 cd ~/llc/llc_ws/src
-git clone git@bitbucket.org:mechatronica/px4_offboard_lowlevel_demo.git
+git clone https://github.com/SaxionMechatronics/px4_offboard_lowlevel.git
 ```
 
 ### 1.3. Clone px4_msgs
