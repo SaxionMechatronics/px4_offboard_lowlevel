@@ -1,0 +1,10 @@
+sitl_mode: false
+use_Lee_attitude_controller: false
+use_attitude_target_msgs: true
+topics_names:
+  command_pose_topic: "command/pose"
+  command_traj_topic: "command/trajectory"
+  odometry_topic: "fmu/out/vehicle_odometry"
+  status_topic: "fmu/out/vehicle_status"
+  actuator_control_topic: "/fmu/in/actuator_motors"
+  attitude_target_topic: "/fmu/in/vehicle_attitude_setpoint"

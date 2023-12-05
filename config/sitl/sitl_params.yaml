@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    sitl_mode: true
+    # Control Mode 1: Thrust + Attitude Setpoints 2: Thrust & Torque Setpoints 3: Actuator Control
+    control_mode: 1
+    topics_names:
+      command_pose_topic: "command/pose"
+      command_traj_topic: "command/trajectory"
+      odometry_topic: "fmu/out/vehicle_odometry"
+      status_topic: "fmu/out/vehicle_status"
+      battery_status_topic: "fmu/out/battery_status"
+      actuator_status_topic: "/fmu/out/actuator_motors"
+      offboard_control_topic: "/fmu/in/offboard_control_mode"
+      vehicle_command_topic: "/fmu/in/vehicle_command"
+      attitude_setpoint_topic: "/fmu/in/vehicle_attitude_setpoint"
+      thrust_setpoints_topic: "/fmu/in/vehicle_thrust_setpoint"
+      torque_setpoints_topic: "/fmu/in/vehicle_torque_setpoint"
+      actuator_control_topic: "/fmu/in/actuator_motors"
+      mocap_topic: "/fmu/in/vehicle_mocap_odometry"

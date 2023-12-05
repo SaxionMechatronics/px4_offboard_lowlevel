@@ -1,0 +1,47 @@
+// Inspired by https://github.com/Jaeyoung-Lim/mavros_controllers
+
+#include <chrono>
+#include <memory>
+#include "rclcpp/rclcpp.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+
+using namespace std::chrono_literals;
+
+class CirclePublisherNode : public rclcpp::Node {
+public:
+  CirclePublisherNode() : Node("circle_publisher") {
+    publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("command/pose", 10);
+
+    timer_ = this->create_wall_timer(0.01s, std::bind(&CirclePublisherNode::publishCirclePose, this));
+  }
+
+private:
+  void publishCirclePose() {
+    static double angle = 0.0;
+    double radius = 2.0;
+
+    geometry_msgs::msg::PoseStamped pose_stamped;
+    pose_stamped.header.stamp = this->now();
+    pose_stamped.header.frame_id = "base_link"; // Change this to your desired frame ID
+
+    pose_stamped.pose.position.x = radius * cos(angle);
+    pose_stamped.pose.position.y = radius * sin(angle);
+    pose_stamped.pose.position.z = 2.0;
+    pose_stamped.pose.orientation.w = 1.0;
+
+    publisher_->publish(pose_stamped);
+
+    angle += 0.01; // Change this value to control the angular speed of the circular path
+  }
+
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_;
+  rclcpp::TimerBase::SharedPtr timer_;
+};
+
+int main(int argc, char **argv) {
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<CirclePublisherNode>();
+  rclcpp::spin(node);
+  rclcpp::shutdown();
+  return 0;
+}
