@@ -168,24 +168,44 @@ void ControllerNode::loadParams() {
     in_sitl_mode_ = this->get_parameter("sitl_mode").as_bool();
     control_mode_ = this->get_parameter("control_mode").as_int();
     
-    // Iris initial gains
-    Eigen::Vector3d position_gain_;
-    position_gain_ << 7, 7, 6;
-    Eigen::Vector3d velocity_gain_;
-    velocity_gain_ << 6, 6, 3;
-    Eigen::Vector3d K_orient;
-    K_orient << 3.5, 3.5, 0.3;
-    Eigen::Vector3d D_orient;
-    D_orient << 0.5, 0.5, 0.1;
+    // Controller gains
+    this->declare_parameter("control_gains.K_p_x", 0.0);
+    this->declare_parameter("control_gains.K_p_y", 0.0);
+    this->declare_parameter("control_gains.K_p_z", 0.0);
+    this->declare_parameter("control_gains.K_v_x", 0.0);
+    this->declare_parameter("control_gains.K_v_y", 0.0);
+    this->declare_parameter("control_gains.K_v_z", 0.0);
+    this->declare_parameter("control_gains.K_R_x", 0.0);
+    this->declare_parameter("control_gains.K_R_y", 0.0);
+    this->declare_parameter("control_gains.K_R_z", 0.0);
+    this->declare_parameter("control_gains.K_w_x", 0.0);
+    this->declare_parameter("control_gains.K_w_y", 0.0);
+    this->declare_parameter("control_gains.K_w_z", 0.0);
+    
+    position_gain_ << this->get_parameter("control_gains.K_p_x").as_double(),
+                      this->get_parameter("control_gains.K_p_y").as_double(),
+                      this->get_parameter("control_gains.K_p_z").as_double();
 
-    // pass the UAV Parameters to the controller
+    velocity_gain_ << this->get_parameter("control_gains.K_v_x").as_double(),
+                      this->get_parameter("control_gains.K_v_y").as_double(),
+                      this->get_parameter("control_gains.K_v_z").as_double();
+
+    attitude_gain_ << this->get_parameter("control_gains.K_R_x").as_double(),
+                      this->get_parameter("control_gains.K_R_y").as_double(),
+                      this->get_parameter("control_gains.K_R_z").as_double();
+
+    ang_vel_gain_ << this->get_parameter("control_gains.K_w_x").as_double(),
+                     this->get_parameter("control_gains.K_w_y").as_double(),
+                     this->get_parameter("control_gains.K_w_z").as_double();
+
+    // pass the UAV Parameters and controller gains to the controller
     controller_.setUavMass(_uav_mass);
     controller_.setInertiaMatrix(_inertia_matrix);
     controller_.setGravity(_gravity);
     controller_.setKPositionGain(position_gain_);
     controller_.setKVelocityGain(velocity_gain_);
-    controller_.setKAttitudeGain(K_orient);
-    controller_.setKAngularRateGain(D_orient);
+    controller_.setKAttitudeGain(attitude_gain_);
+    controller_.setKAngularRateGain(ang_vel_gain_);
 }
 
 void ControllerNode::compute_ControlAllocation_and_ActuatorEffect_matrices() {

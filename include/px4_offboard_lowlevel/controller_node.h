@@ -126,6 +126,12 @@ private:
     Eigen::MatrixXd torques_and_thrust_to_rotor_velocities_;
     Eigen::MatrixXd throttles_to_normalized_torques_and_thrust_;
 
+    // Controller gains
+    Eigen::Vector3d position_gain_;
+    Eigen::Vector3d velocity_gain_;
+    Eigen::Vector3d attitude_gain_;
+    Eigen::Vector3d ang_vel_gain_;
+
     // Logic switches
     int control_mode_;
     bool in_sitl_mode_;

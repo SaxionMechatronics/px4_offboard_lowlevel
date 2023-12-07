@@ -18,12 +18,18 @@ def generate_launch_description():
       'config', 'sitl',
       'sitl_params.yaml'
       )
+
+   config_3 = os.path.join(
+      get_package_share_directory('px4_offboard_lowlevel'),
+      'config', 'controller',
+      'initial_gains_iris.yaml'
+      )
    
    return LaunchDescription([
       Node(
          package='px4_offboard_lowlevel',
          executable='offboard_controller_node',
          name='offboard_controller',
-         parameters=[config_1, config_2]
+         parameters=[config_1, config_2, config_3]
       )
    ])
