@@ -63,7 +63,7 @@ void controller::calculateControllerOutput(
     
     const Eigen::Vector3d I_a_d = -position_gain_.cwiseProduct(e_p)
                                 -velocity_gain_.cwiseProduct(e_v)
-                                +_uav_mass * _gravity * Eigen::Vector3d::UnitZ() + r_acceleration_W_;
+                                +_uav_mass * _gravity * Eigen::Vector3d::UnitZ() + _uav_mass * r_acceleration_W_;
     thrust = I_a_d.dot(R_B_W_.col(2));
     Eigen::Vector3d B_z_d;
     B_z_d = I_a_d;
@@ -83,18 +83,17 @@ void controller::calculateControllerOutput(
     // Attitude tracking.
     Eigen::Vector3d tau;
 
-    Eigen::Matrix3d R_IB_d;
     const Eigen::Matrix3d e_R_matrix =
             0.5 * (R_d_w.transpose() * R_B_W_ - R_B_W_.transpose() * R_d_w)   ;
     Eigen::Vector3d e_R;
     e_R << e_R_matrix(2, 1), e_R_matrix(0, 2), e_R_matrix(1, 0);
     const Eigen::Vector3d omega_ref =
             r_yaw_rate * Eigen::Vector3d::UnitZ();
-    const Eigen::Vector3d e_omega = angular_velocity_B_ - R_B_W_.transpose() * R_IB_d * omega_ref;
+    const Eigen::Vector3d e_omega = angular_velocity_B_ - R_B_W_.transpose() * R_d_w * omega_ref;
     tau = -attitude_gain_.cwiseProduct(e_R)
            - angular_rate_gain_.cwiseProduct(e_omega)
            + angular_velocity_B_.cross(_inertia_matrix.asDiagonal() * angular_velocity_B_);
 
-    // Normalize the wrench
+    // Output the wrench
     *controller_torque_thrust << tau, thrust;
 }
