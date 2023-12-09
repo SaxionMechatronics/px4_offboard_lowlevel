@@ -428,14 +428,14 @@ void ControllerNode::vehicle_odometryCallback(const px4_msgs::msg::VehicleOdomet
 }
 
 void ControllerNode::vehicleStatusCallback(const px4_msgs::msg::VehicleStatus::SharedPtr status_msg){
-    px4_msgs::msg::VehicleStatus vehicle_status_ = *status_msg;
-    if (vehicle_status_.arming_state ==2){
+    current_status_ = *status_msg;
+    if (current_status_.arming_state ==2){
         RCLCPP_INFO_ONCE(get_logger(),"ARMED - vehicle_status_msg.");
     }
     else {
         RCLCPP_INFO(get_logger(),"NOT ARMED - vehicle_status_msg.");
     }
-    if (vehicle_status_.nav_state == 14){
+    if (current_status_.nav_state == 14){
         RCLCPP_INFO_ONCE(get_logger(),"OFFBOARD - vehicle_status_msg.");
     }
     else {
@@ -523,20 +523,22 @@ void ControllerNode::updateControllerOutput() {
     else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output);
     
     // Publish the controller output
-    switch (control_mode_)
-    {
-    case 1:
-        publishAttitudeSetpointMsg(normalized_torque_thrust, desired_quaternion);
-        break;
-    case 2:
-        publishThrustTorqueMsg(normalized_torque_thrust);
-        break;
-    case 3:
-        publishActuatorMotorsMsg(throttles);
-        break;
-    default:
-        publishAttitudeSetpointMsg(normalized_torque_thrust, desired_quaternion);
-        break;
+    if (current_status_.nav_state == px4_msgs::msg::VehicleStatus::NAVIGATION_STATE_OFFBOARD) {
+        switch (control_mode_)
+        {
+        case 1:
+            publishAttitudeSetpointMsg(normalized_torque_thrust, desired_quaternion);
+            break;
+        case 2:
+            publishThrustTorqueMsg(normalized_torque_thrust);
+            break;
+        case 3:
+            publishActuatorMotorsMsg(throttles);
+            break;
+        default:
+            publishAttitudeSetpointMsg(normalized_torque_thrust, desired_quaternion);
+            break;
+        }
     }
 }
 
