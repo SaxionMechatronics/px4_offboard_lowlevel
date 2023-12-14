@@ -153,7 +153,7 @@ def main(args=None):
     f.write("            z: " + str(inertia[2]) + "\n")
     f.write("          moment_constant: " + str(torque_coefficent) + "\n")
     f.write("          thrust_constant: " + str(k_thrust) + "\n")
-    f.write("          max_rotor_speed: " + str(np.max(MotorElectricalSpeedrads)) + "\n")
+    f.write("          max_rotor_speed: " + str(round(np.max(MotorElectricalSpeedrads))) + "\n")
     f.write("          gravity: " + str(gravity) + "\n")
     f.write("          omega_to_pwm_coefficient:\n")
     f.write("            x_2: " + str(p1) + "\n")
