@@ -37,7 +37,7 @@ colcon build --symlink-install
 Before building PX4 you need to change the list of topics for the μXRCE Client, to do this replace the default topics configuration in ```PX4-Autopilot/src/modules/uxrce_dds_client/dds_topics.yaml``` by ```px4-resources/dds_topics.yaml``` from this repository.
 
 ```bash
-cp /PATH_TO/src/px4_offboard_lowlevel_demo/px4-resources/dds_topics.yaml PATH_TO/PX4-Autopilot/src/modules/uxrce_dds_client/
+cp /PATH_TO/src/px4_offboard_lowlevel/px4-resources/dds_topics.yaml PATH_TO/PX4-Autopilot/src/modules/uxrce_dds_client/
 ```
 
 ### 2.2. Disable lockstep in PX4
@@ -62,5 +62,5 @@ Change enable_lockstep (line 466) from 1 to 0 like so:
 
 I hate it, so here it is:
 ```bash
-cp /PATH_TO/src/px4_offboard_lowlevel_demo/px4-resources/empty.world PATH_TO/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/worlds/
+cp /PATH_TO/src/px4_offboard_lowlevel/px4-resources/empty.world PATH_TO/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/worlds/
 ```
