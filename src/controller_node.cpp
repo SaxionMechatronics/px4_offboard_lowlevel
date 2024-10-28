@@ -514,28 +514,41 @@ void ControllerNode::updateControllerOutput() {
     //  calculate controller output
     Eigen::VectorXd controller_output;
     Eigen::Quaterniond desired_quaternion;
-    controller_.calculateControllerOutput(&controller_output, &desired_quaternion);
-    
-    // Normalize the controller output
+    Eigen::VectorXd controller_output_FBL;
     Eigen::Vector4d normalized_torque_thrust;
     Eigen::VectorXd throttles;
-    if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output);
-    else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output);
+        
     
     // Publish the controller output
     if (current_status_.nav_state == px4_msgs::msg::VehicleStatus::NAVIGATION_STATE_OFFBOARD) {
         switch (control_mode_)
         {
         case 1:
+            controller_.calculateControllerOutput(&controller_output, &desired_quaternion);
+            // Normalize the controller output
+            if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output);
+            else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output);
             publishAttitudeSetpointMsg(normalized_torque_thrust, desired_quaternion);
             break;
         case 2:
+            controller_.calculateFBLControllerOutout(&controller_output_FBL);
+            // Normalize the controller output
+            if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output_FBL);
+            else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output_FBL);
             publishThrustTorqueMsg(normalized_torque_thrust);
             break;
         case 3:
+            controller_.calculateControllerOutput(&controller_output, &desired_quaternion);
+            // Normalize the controller output
+            if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output);
+            else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output);
             publishActuatorMotorsMsg(throttles);
             break;
         default:
+            controller_.calculateControllerOutput(&controller_output, &desired_quaternion);
+            // Normalize the controller output
+            if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output);
+            else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output);
             publishAttitudeSetpointMsg(normalized_torque_thrust, desired_quaternion);
             break;
         }

@@ -17,10 +17,11 @@ MicroXRCEAgent udp4 -p 8888
 ## 3. Launch the controller
 ```bash
 # Source the workspace
-source ~/llc_ws/install/setup.sh
+source /llc_ws/install/setup.sh
 
 # Start the simulation
 ros2 launch px4_offboard_lowlevel iris_sitl.launch.py
+ros2 launch px4_offboard_lowlevel visualize.launch.py
 ```
 
 ## 4. Start flying
@@ -28,9 +29,9 @@ ros2 launch px4_offboard_lowlevel iris_sitl.launch.py
 ```bash
 # Source the workspace
 source ~/llc_ws/install/setup.sh
+ros2 run px4_offboard_lowlevel circle_trajectory_node
 
 # Start the trajectory generator
-ros2 run px4_offboard_lowlevel circle_trajectory_node
 ```
 
 2. Open QGroundControl, change to offboard mode, and arm the drone.
@@ -46,3 +47,7 @@ ros2 param set /offboard_controller control_mode 2
 ```bash
 ros2 param set /offboard_controller control_mode 3
 ```
+```bash
+ros2 launch px4_offboard visualize.launch.py
+```
+

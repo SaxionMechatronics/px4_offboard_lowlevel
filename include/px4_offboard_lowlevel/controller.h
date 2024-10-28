@@ -41,6 +41,7 @@ class controller {
 public:
     controller();
     void calculateControllerOutput(Eigen::VectorXd *controller_torque_thrust, Eigen::Quaterniond *desired_quaternion);
+    void calculateFBLControllerOutout(Eigen::VectorXd *controller_torque_thrust);
 
     // Setters
     void setOdometry(const Eigen::Vector3d &position_W, const Eigen::Quaterniond &orientation_B_W, 
@@ -104,6 +105,8 @@ private:
     double _uav_mass;
     Eigen::Vector3d _inertia_matrix;
     double _gravity;
+    double zeta1;
+    double zeta2;
     
     // Lee Controller Gains
     Eigen::Vector3d position_gain_;
