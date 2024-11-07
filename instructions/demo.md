@@ -11,7 +11,9 @@ make px4_sitl gazebo-classic_iris
 
 ## 2. Run the MicroXRCEAgent
 ```bash
-MicroXRCEAgent udp4 -p 8888
+MicroXRCEAgent udp4 -p 8888; exec bash
+ros2 run plotjuggler plotjuggler
+
 ```
 
 ## 3. Launch the controller
@@ -21,6 +23,7 @@ source /llc_ws/install/setup.sh
 
 # Start the simulation
 ros2 launch px4_offboard_lowlevel iris_sitl.launch.py
+# For Visualisation in Rivz
 ros2 launch px4_offboard_lowlevel visualize.launch.py
 ```
 
@@ -36,18 +39,8 @@ ros2 run px4_offboard_lowlevel circle_trajectory_node
 
 2. Open QGroundControl, change to offboard mode, and arm the drone.
 
-## Change the control mode
-By default the controller will be sending [Attitude Setpoints](https://docs.px4.io/main/en/msg_docs/VehicleAttitudeSetpoint.html):
-- You can switch to [Thrust](https://docs.px4.io/main/en/msg_docs/VehicleThrustSetpoint.html) + [Torque setpoints](https://docs.px4.io/main/en/msg_docs/VehicleTorqueSetpoint.html) mode by changing `control_mode` parameter:
+## Change the controller from SE(3) to Feedback Linearization controller
+
 ```bash
 ros2 param set /offboard_controller control_mode 2
 ```
-
-- you can switch to [Direct Actuator commands](https://docs.px4.io/main/en/msg_docs/ActuatorMotors.html) (throttles of the motors) by changing `control_mode` parameter:
-```bash
-ros2 param set /offboard_controller control_mode 3
-```
-```bash
-ros2 launch px4_offboard visualize.launch.py
-```
-
