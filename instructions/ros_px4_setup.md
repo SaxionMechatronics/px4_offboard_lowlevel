@@ -98,7 +98,15 @@ For more information on ROS 2 refer to the [ROS 2 Documentation](https://docs.ro
     MicroXRCEAgent udp4 -p 8888
 ```
 
-6. Start the simulation
+6. While installing PX4 Gazebo Garden will be Automatically Installed so now uninstall it and install Gazebo classic
+```bash
+    sudo apt remove gz-harmonic
+    sudo apt install aptitude
+    sudo aptitude install gazebo libgazebo11 libgazebo-dev
+```
+Note that aptitude is needed because it can resolve dependency conflicts (by removing certain packages) that apt is unable to handle.
+
+Start the simulation
 ```bash
     # change directory to PX4
     cd ~/llc/PX4-Autopilot
