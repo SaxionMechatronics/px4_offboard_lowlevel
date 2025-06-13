@@ -33,67 +33,103 @@
  ****************************************************************************/
 
 #include "../include/px4_offboard_lowlevel/controller.h"
+#include <iostream>
+#include <algorithm>
 
 
-controller::controller(){
+controller::controller()
+    : env_(ORT_LOGGING_LEVEL_WARNING, "controller"),
+      session_options_(),
+      session_(nullptr)  // temp placeholder, real initialization after setup
+{
+    trigger_ = 0.0;
 
+    session_options_.SetIntraOpNumThreads(1);
+
+    std::string package_share_dir = ament_index_cpp::get_package_share_directory("px4_offboard_lowlevel");
+    std::string model_path = package_share_dir + "/policy/controller.onnx";
+
+    session_ = Ort::Session(env_, model_path.c_str(), session_options_);
+
+    Ort::AllocatorWithDefaultOptions allocator;
+
+    // Input Info
+    Ort::AllocatedStringPtr input_name_ptr = session_.GetInputNameAllocated(0, allocator);
+    input_name_ = input_name_ptr.get();
+
+    // Output Info
+    Ort::AllocatedStringPtr output_name_ptr = session_.GetOutputNameAllocated(0, allocator);
+    output_name_ = output_name_ptr.get();
 }
 
 void controller::calculateControllerOutput(
-        Eigen::VectorXd *controller_torque_thrust, Eigen::Quaterniond *desired_quaternion) {
-    assert(controller_torque_thrust);
-
-    controller_torque_thrust->resize(4);
-
-    // Geometric controller based on: 
-    // T. Lee, M. Leok and N. H. McClamroch, "Geometric tracking control of a quadrotor UAV on SE(3),
-    // " 49th IEEE Conference on Decision and Control (CDC), Atlanta, GA, USA, 2010.
+        Eigen::VectorXd *controller_rates_thrust) {
+    assert(controller_rates_thrust);
 
 
-    // Trajectory tracking.
-    double thrust;
-    Eigen::Matrix3d R_d_w;
+    // Prepare Neural Network observations
+    const Eigen::Vector3d e_p = r_position_W_ - position_W_;
 
-    // Compute translational tracking errors.
-    const Eigen::Vector3d e_p =
-                position_W_ - r_position_W_;
-    
-    const Eigen::Vector3d e_v = 
-                velocity_W_ - r_velocity_W_;
-    
-    const Eigen::Vector3d I_a_d = -position_gain_.cwiseProduct(e_p)
-                                -velocity_gain_.cwiseProduct(e_v)
-                                +_uav_mass * _gravity * Eigen::Vector3d::UnitZ() + _uav_mass * r_acceleration_W_;
-    thrust = I_a_d.dot(R_B_W_.col(2));
-    Eigen::Vector3d B_z_d;
-    B_z_d = I_a_d;
-    B_z_d.normalize();
+    std::vector<float> input_data(19, 0.0f);
+    input_data[0]  = e_p(0);
+    input_data[1]  = e_p(1);
+    input_data[2]  = e_p(2);
+    input_data[3]  = R_B_W_(0,0);
+    input_data[4]  = R_B_W_(0,1);
+    input_data[5]  = R_B_W_(0,2);
+    input_data[6]  = R_B_W_(1,0);
+    input_data[7]  = R_B_W_(1,1);
+    input_data[8]  = R_B_W_(1,2);
+    input_data[9]  = R_B_W_(2,0);
+    input_data[10] = R_B_W_(2,1);
+    input_data[11] = R_B_W_(2,2);
+    input_data[12] = velocity_W_(0);
+    input_data[13] = velocity_W_(1);
+    input_data[14] = velocity_W_(2);
+    input_data[15] = angular_velocity_B_(0);
+    input_data[16] = angular_velocity_B_(1);
+    input_data[17] = angular_velocity_B_(2);
+    input_data[18] = trigger_;
 
-    // Calculate Desired Rotational Matrix
-    const Eigen::Vector3d B_x_d(std::cos(r_yaw), std::sin(r_yaw), 0.0);
-    Eigen::Vector3d B_y_d = B_z_d.cross(B_x_d);
-    B_y_d.normalize();
-    R_d_w.col(0) = B_y_d.cross(B_z_d);
-    R_d_w.col(1) = B_y_d;
-    R_d_w.col(2) = B_z_d;
-    
-    Eigen::Quaterniond q_temp(R_d_w);
-    *desired_quaternion = q_temp;
-    
-    // Attitude tracking.
-    Eigen::Vector3d tau;
+    std::vector<int64_t> input_shape{1, 19};    // Neural Network input shape
 
-    const Eigen::Matrix3d e_R_matrix =
-            0.5 * (R_d_w.transpose() * R_B_W_ - R_B_W_.transpose() * R_d_w)   ;
-    Eigen::Vector3d e_R;
-    e_R << e_R_matrix(2, 1), e_R_matrix(0, 2), e_R_matrix(1, 0);
-    const Eigen::Vector3d omega_ref =
-            r_yaw_rate * Eigen::Vector3d::UnitZ();
-    const Eigen::Vector3d e_omega = angular_velocity_B_ - R_B_W_.transpose() * R_d_w * omega_ref;
-    tau = -attitude_gain_.cwiseProduct(e_R)
-           - angular_rate_gain_.cwiseProduct(e_omega)
-           + angular_velocity_B_.cross(_inertia_matrix.asDiagonal() * angular_velocity_B_);
+    std::vector<const char*> input_names = {input_name_.c_str()};
+    std::vector<const char*> output_names = {output_name_.c_str()};
+
+    Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+
+    Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
+        memory_info,
+        input_data.data(),
+        input_data.size() * sizeof(float),
+        input_shape.data(),
+        input_shape.size()
+    );
+
+    // Run inference
+    auto output_tensors = session_.Run(
+        Ort::RunOptions{nullptr}, input_names.data(), &input_tensor, 1,
+        output_names.data(), 1);
+
+    // Extract output
+    float* output_data = output_tensors.front().GetTensorMutableData<float>();
+
+    std::cout << "Act: " << output_data[0] << '\t'  << output_data[1] << '\t'  << output_data[2] << std::endl;
+
+    // Clamp output
+    output_data[0] = std::clamp(output_data[0], -1.0f, 1.0f);
+    output_data[1] = std::clamp(output_data[1], -1.0f, 1.0f);
+    output_data[2] = std::clamp(output_data[2], -1.0f, 1.0f);
+
+    // Rescale neural network output to physical units
+    const float thrust_scale = 32;          // N
+    const float rate_scale = 4;             // rad/s
+
+    // Thrust with gravity compensation
+    double thrust = output_data[0] * thrust_scale + (_uav_mass * _gravity);
+    Eigen::Vector3d rates(output_data[1] * rate_scale, output_data[2] * rate_scale, 0.0);
 
     // Output the wrench
-    *controller_torque_thrust << tau, thrust;
+    controller_rates_thrust->resize(4);
+    *controller_rates_thrust << rates, thrust;
 }

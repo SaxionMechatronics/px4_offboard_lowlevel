@@ -47,10 +47,12 @@
 #include <px4_msgs/msg/vehicle_attitude_setpoint.hpp>
 #include <px4_msgs/msg/vehicle_thrust_setpoint.hpp>
 #include <px4_msgs/msg/vehicle_torque_setpoint.hpp>
+#include <px4_msgs/msg/vehicle_rates_setpoint.hpp>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <trajectory_msgs/msg/multi_dof_joint_trajectory_point.hpp>
+#include <std_msgs/msg/float32.hpp>
 
 #include <string>
 
@@ -81,12 +83,14 @@ private:
     rclcpp::Subscription<px4_msgs::msg::VehicleOdometry>::SharedPtr vehicle_odometry_sub_;
     rclcpp::Subscription<rcl_interfaces::msg::ParameterEvent>::SharedPtr parameter_event_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr command_pose_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr trigger_sub_;
     
     // Publishers
     rclcpp::Publisher<px4_msgs::msg::ActuatorMotors>::SharedPtr actuator_motors_publisher_;
     rclcpp::Publisher<px4_msgs::msg::VehicleAttitudeSetpoint>::SharedPtr attitude_setpoint_publisher_;
     rclcpp::Publisher<px4_msgs::msg::VehicleThrustSetpoint>::SharedPtr thrust_setpoint_publisher_;
     rclcpp::Publisher<px4_msgs::msg::VehicleTorqueSetpoint>::SharedPtr torque_setpoint_publisher_;
+    rclcpp::Publisher<px4_msgs::msg::VehicleRatesSetpoint>::SharedPtr rates_setpoint_publisher_;
     rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
 	rclcpp::Publisher<px4_msgs::msg::VehicleCommand>::SharedPtr vehicle_command_publisher_;
 
@@ -111,6 +115,8 @@ private:
     std::string thrust_setpoint_topic_;
     std::string torque_setpoint_topic_;
     std::string actuator_control_topic_;
+    std::string rates_setpoint_topic_;
+    std::string trigger_topic_;
 
     // UAV Parameters
     double _arm_length;
@@ -149,10 +155,12 @@ private:
     void commandTrajectoryCallback(const trajectory_msgs::msg::MultiDOFJointTrajectoryPoint::SharedPtr& traj_msg);
     void vehicle_odometryCallback(const px4_msgs::msg::VehicleOdometry::SharedPtr odom_msg);
     void vehicleStatusCallback(const px4_msgs::msg::VehicleStatus::SharedPtr status_msg);
+    void triggerCallback(const std_msgs::msg::Float32::SharedPtr trigger_msg);
 
     void publishActuatorMotorsMsg(const Eigen::VectorXd& throttles);
     void publishThrustTorqueMsg(const Eigen::Vector4d& controller_output);
     void publishAttitudeSetpointMsg(const Eigen::Vector4d& controller_output, const Eigen::Quaterniond& desired_quaternion);
+    void publishRatesSetpointMsg(const Eigen::Vector4d& controller_output);
     void publishOffboardControlModeMsg();
     void publish_vehicle_command(uint16_t command, float param1 =0.0, float param2 = 0.0);   
 

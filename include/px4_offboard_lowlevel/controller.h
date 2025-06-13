@@ -36,11 +36,13 @@
 #define CONTROLLER_CONTROLLER_H
 
 #include <eigen3/Eigen/Eigen>
+#include "ament_index_cpp/get_package_share_directory.hpp"
+#include <onnxruntime_cxx_api.h>
 
 class controller {
 public:
     controller();
-    void calculateControllerOutput(Eigen::VectorXd *controller_torque_thrust, Eigen::Quaterniond *desired_quaternion);
+    void calculateControllerOutput(Eigen::VectorXd *controller_rates_thrust);
 
     // Setters
     void setOdometry(const Eigen::Vector3d &position_W, const Eigen::Quaterniond &orientation_B_W, 
@@ -69,6 +71,10 @@ public:
         r_yaw = r_R_B_W_.eulerAngles(0, 1, 2)(2);
         r_yaw_rate = 0.0;
     }
+
+    void setTrigger(const float trigger) {
+        trigger_ = trigger;
+    } 
 
     void setKPositionGain(const Eigen::Vector3d &PositionGain){
         position_gain_ = PositionGain;
@@ -123,6 +129,17 @@ private:
     Eigen::Matrix3d r_R_B_W_;
     double r_yaw;
     double r_yaw_rate;
+
+    // Trigger
+    float trigger_;
+
+    // ONXX Variables
+    Ort::Env env_;
+    Ort::SessionOptions session_options_;
+    Ort::Session session_;
+
+    std::string input_name_;
+    std::string output_name_;
 };
 
 #endif //CONTROLLER_CONTROLLER_H

@@ -2,38 +2,26 @@
 
 # Install PX4
 
-1. [Clone PX4 Source code](https://github.com/PX4/PX4-Autopilot)
+1. Clone [our fork of the PX4 Source code](https://github.com/SaxionMechatronics/PX4-Autopilot), which contains the custom airframe used for the included nn-controller.
 
    - Clone into any directory 
 
 ```bash
-    # for example into ~/llc
-    cd ~/llc
+    # for example into ~/nnc
+    cd ~/nnc
 
     # clone
-    git clone https://github.com/PX4/PX4-Autopilot.git --recursive
+    git clone https://github.com/SaxionMechatronics/PX4-Autopilot.git --recursive
+
+    # checkout to the branch with the custom aiframe
+    git checkout nn-control
+    git submodule update --recusive
 ```
-
-   <!-- - If working with older version of PX4-Autopilot, change the head of this clone
-   - Head for this package can be found [PX4-Autopilot github (main->Tags)](https://github.com/PX4/PX4-Autopilot/tags)
-
-```bash
-    # change directory to PX4
-    cd ~/llc/PX4-Autopilot
-    # for example
-    git checkout v1.14.0-rc1
-
-    # make sure tags are correctly checked out
-    git branch
-
-    # update the submodules
-    make submodulesclean
-``` -->
 
 2. Run the ubuntu.sh with no arguments (in a bash shell) to install everything
 
 ```bash
-    cd ~/llc
+    cd ~/nnc
     bash ./PX4-Autopilot/Tools/setup/ubuntu.sh
 ```
 3. Restart the system
@@ -80,7 +68,7 @@ For more information on ROS 2 refer to the [ROS 2 Documentation](https://docs.ro
 4. Setup Micro XRCE-DDS Agent & Client
 ```bash
     # change the diectory
-    cd ~/llc
+    cd ~/nnc
 
     # Fetch and build the agent
     git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git
@@ -101,20 +89,20 @@ For more information on ROS 2 refer to the [ROS 2 Documentation](https://docs.ro
 6. Start the simulation
 ```bash
     # change directory to PX4
-    cd ~/llc/PX4-Autopilot
+    cd ~/nnc/PX4-Autopilot
 
     # Start a PX4 Gazebo simulation using:
-    make px4_sitl gz_x500
+    make px4_sitl_nolockstep gz_rl_frame
 
     # The agent and client are now running they should connect.
 ```
 
 # Troubleshooting
 
-1. Unknown target 'gz_x500'
+1. Unknown target 'gz_rl_frame'
 ```bash
     # change directory 
-    cd ~/llc/PX4-Autopilot
+    cd ~/nnc/PX4-Autopilot
 
     # run this command
     make clean

@@ -53,6 +53,8 @@ ControllerNode::ControllerNode()
             (status_topic_, qos, std::bind(&ControllerNode::vehicleStatusCallback, this, _1));
         command_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>
             (command_pose_topic_, 10, std::bind(&ControllerNode::commandPoseCallback, this, _1));
+        trigger_sub_ = this->create_subscription<std_msgs::msg::Float32>
+            (trigger_topic_, 10, std::bind(&ControllerNode::triggerCallback, this, _1));
 
         // Publishers
         attitude_setpoint_publisher_ = this->create_publisher<px4_msgs::msg::VehicleAttitudeSetpoint>
@@ -67,6 +69,8 @@ ControllerNode::ControllerNode()
             (thrust_setpoint_topic_, 10);
         torque_setpoint_publisher_ = this->create_publisher<px4_msgs::msg::VehicleTorqueSetpoint>
             (torque_setpoint_topic_, 10);
+        rates_setpoint_publisher_ = this->create_publisher<px4_msgs::msg::VehicleRatesSetpoint>
+            (rates_setpoint_topic_, 10);
         
         // Parameters subscriber
         callback_handle_ = this->add_on_set_parameters_callback(
@@ -147,6 +151,8 @@ void ControllerNode::loadParams() {
     this->declare_parameter("topics_names.thrust_setpoints_topic", "default");
     this->declare_parameter("topics_names.torque_setpoints_topic", "default");
     this->declare_parameter("topics_names.actuator_control_topic", "default");
+    this->declare_parameter("topics_names.rates_setpoints_topic", "default");
+    this->declare_parameter("topics_names.trigger_topic", "default");
 
     command_pose_topic_ = this->get_parameter("topics_names.command_pose_topic").as_string();
     command_traj_topic_ = this->get_parameter("topics_names.command_traj_topic").as_string();
@@ -160,10 +166,12 @@ void ControllerNode::loadParams() {
     thrust_setpoint_topic_ = this->get_parameter("topics_names.thrust_setpoints_topic").as_string();
     torque_setpoint_topic_ = this->get_parameter("topics_names.torque_setpoints_topic").as_string();
     actuator_control_topic_ = this->get_parameter("topics_names.actuator_control_topic").as_string();
+    rates_setpoint_topic_ = this->get_parameter("topics_names.rates_setpoints_topic").as_string();
+    trigger_topic_ = this->get_parameter("topics_names.trigger_topic").as_string();
     
     // Load logic switches
     this->declare_parameter("sitl_mode", true);
-    this->declare_parameter("control_mode", 1);
+    this->declare_parameter("control_mode", 4);
 
     in_sitl_mode_ = this->get_parameter("sitl_mode").as_bool();
     control_mode_ = this->get_parameter("control_mode").as_int();
@@ -362,28 +370,37 @@ void ControllerNode::publishOffboardControlModeMsg()
 	offboard_msg.position = false;
 	offboard_msg.velocity = false;
 	offboard_msg.acceleration = false;
-	offboard_msg.body_rate = false;
     switch (control_mode_)
     {
     case 1:
         offboard_msg.attitude = true;
         offboard_msg.thrust_and_torque = false;
         offboard_msg.direct_actuator = false;
+	    offboard_msg.body_rate = false;
         break;
     case 2:
         offboard_msg.attitude = false;
         offboard_msg.thrust_and_torque = true;
         offboard_msg.direct_actuator = false;
+	    offboard_msg.body_rate = false;
         break;
     case 3:
         offboard_msg.attitude = false;
         offboard_msg.thrust_and_torque = false;
         offboard_msg.direct_actuator = true;
+	    offboard_msg.body_rate = false;
+        break;
+    case 4:
+        offboard_msg.attitude = false;
+        offboard_msg.thrust_and_torque = false;
+        offboard_msg.direct_actuator = false;
+	    offboard_msg.body_rate = true;
         break;
     default:
         offboard_msg.attitude = true;
         offboard_msg.thrust_and_torque = false;
         offboard_msg.direct_actuator = false;
+        offboard_msg.body_rate = false;
         break;
     }
 	offboard_msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
@@ -425,6 +442,10 @@ void ControllerNode::vehicle_odometryCallback(const px4_msgs::msg::VehicleOdomet
                                 position, orientation, velocity, angular_velocity);
 
         controller_.setOdometry(position, orientation, velocity, angular_velocity);
+}
+
+void ControllerNode::triggerCallback(const std_msgs::msg::Float32::SharedPtr trigger_msg){
+    controller_.setTrigger(trigger_msg->data);
 }
 
 void ControllerNode::vehicleStatusCallback(const px4_msgs::msg::VehicleStatus::SharedPtr status_msg){
@@ -510,35 +531,45 @@ void ControllerNode::publishAttitudeSetpointMsg(const Eigen::Vector4d& controlle
     attitude_setpoint_publisher_->publish(attitude_setpoint_msg);
 }
 
+void ControllerNode::publishRatesSetpointMsg(const Eigen::Vector4d& controller_output) {
+    px4_msgs::msg::VehicleRatesSetpoint rates_sp_msg;
+
+    rates_sp_msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
+
+    rates_sp_msg.roll = controller_output[0];
+    rates_sp_msg.pitch = -controller_output[1];
+    rates_sp_msg.yaw = -controller_output[2];
+
+    rates_sp_msg.thrust_body[0] = 0.0;
+    rates_sp_msg.thrust_body[1] = 0.0;
+    rates_sp_msg.thrust_body[2] = -controller_output[3];
+
+    rates_setpoint_publisher_->publish(rates_sp_msg);
+}
+
 void ControllerNode::updateControllerOutput() {
     //  calculate controller output
     Eigen::VectorXd controller_output;
     Eigen::Quaterniond desired_quaternion;
-    controller_.calculateControllerOutput(&controller_output, &desired_quaternion);
+    controller_.calculateControllerOutput(&controller_output);
     
     // Normalize the controller output
+    Eigen::VectorXd controller_output_wrench = Eigen::VectorXd::Zero(4);
+    controller_output_wrench[3] = controller_output[3];
+
     Eigen::Vector4d normalized_torque_thrust;
     Eigen::VectorXd throttles;
-    if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output);
-    else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output);
+
+    if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output_wrench);
+    else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output_wrench);
+
+    std::cout << "Thrust: " << controller_output[3] << "\tNormalized thrust: " << normalized_torque_thrust[3] << "\n";
+
+    controller_output[3] = normalized_torque_thrust[3];
     
     // Publish the controller output
     if (current_status_.nav_state == px4_msgs::msg::VehicleStatus::NAVIGATION_STATE_OFFBOARD) {
-        switch (control_mode_)
-        {
-        case 1:
-            publishAttitudeSetpointMsg(normalized_torque_thrust, desired_quaternion);
-            break;
-        case 2:
-            publishThrustTorqueMsg(normalized_torque_thrust);
-            break;
-        case 3:
-            publishActuatorMotorsMsg(throttles);
-            break;
-        default:
-            publishAttitudeSetpointMsg(normalized_torque_thrust, desired_quaternion);
-            break;
-        }
+        publishRatesSetpointMsg(controller_output);
     }
 }
 

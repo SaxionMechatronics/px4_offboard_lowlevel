@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.8)
 project(px4_offboard_lowlevel)
 
+# ONNX Runtime paths
+set(ONNXRUNTIME_ROOT "$ENV{HOME}/libs/onnxruntime-linux-x64-1.21.0")
+include_directories(${ONNXRUNTIME_ROOT}/include)
+link_directories(${ONNXRUNTIME_ROOT}/lib)
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -8,6 +13,7 @@ endif()
 # find dependencies
 # Find ROS 2 dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -27,6 +33,8 @@ add_executable(offboard_controller_node
   src/controller_node.cpp
 )
 
+target_link_libraries(offboard_controller_node onnxruntime)
+
 add_executable(circle_trajectory_node 
   src/TrajectoryPublishers/circle_trajectory_node.cpp
 )
@@ -39,11 +47,22 @@ ament_target_dependencies(offboard_controller_node
   Eigen3
   px4_msgs
   trajectory_msgs
+  ament_index_cpp
 )
 
 ament_target_dependencies(circle_trajectory_node
   rclcpp
   geometry_msgs
+)
+
+install(FILES
+  ${ONNXRUNTIME_ROOT}/lib/libonnxruntime.so
+  DESTINATION lib
+)
+
+install(FILES
+  policy/controller.onnx
+  DESTINATION share/${PROJECT_NAME}/policy
 )
 
 install(TARGETS offboard_controller_node
