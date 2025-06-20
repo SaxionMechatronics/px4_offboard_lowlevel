@@ -125,9 +125,14 @@ void controller::calculateControllerOutput(
     const float thrust_scale = 32;          // N
     const float rate_scale = 4;             // rad/s
 
+    // Proportional yaw control
+    const float yaw = atan2(R_B_W_(1,0), R_B_W_(0,0));
+    const float yaw_target = atan2(r_R_B_W_(1,0), r_R_B_W_(0,0));
+    const float yaw_rate = (yaw_target - yaw) * 0.5;
+
     // Thrust with gravity compensation
     double thrust = output_data[0] * thrust_scale + (_uav_mass * _gravity);
-    Eigen::Vector3d rates(output_data[1] * rate_scale, output_data[2] * rate_scale, 0.0);
+    Eigen::Vector3d rates(output_data[1] * rate_scale, output_data[2] * rate_scale, yaw_rate);
 
     // Output the wrench
     controller_rates_thrust->resize(4);
