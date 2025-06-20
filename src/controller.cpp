@@ -83,9 +83,9 @@ void controller::calculateControllerOutput(
     input_data[9]  = R_B_W_(2,0);
     input_data[10] = R_B_W_(2,1);
     input_data[11] = R_B_W_(2,2);
-    input_data[12] = velocity_W_(0);
-    input_data[13] = velocity_W_(1);
-    input_data[14] = velocity_W_(2);
+    input_data[12] = velocity_B_(0);
+    input_data[13] = velocity_B_(1);
+    input_data[14] = velocity_B_(2);
     input_data[15] = angular_velocity_B_(0);
     input_data[16] = angular_velocity_B_(1);
     input_data[17] = angular_velocity_B_(2);

@@ -46,10 +46,11 @@ public:
 
     // Setters
     void setOdometry(const Eigen::Vector3d &position_W, const Eigen::Quaterniond &orientation_B_W, 
-        const Eigen::Vector3d &velocity_B, const Eigen::Vector3d &angular_velocity_B){
+        const Eigen::Vector3d &velocity_W, const Eigen::Vector3d &angular_velocity_B){
         R_B_W_ = orientation_B_W.toRotationMatrix();
         position_W_ = position_W;
-        velocity_W_ = R_B_W_ * velocity_B;
+        velocity_W_ = velocity_W;
+        velocity_B_ = R_B_W_.transpose() * velocity_W;
         angular_velocity_B_ = angular_velocity_B;
     }
 
@@ -120,6 +121,7 @@ private:
     // Current states
     Eigen::Vector3d position_W_;
     Eigen::Vector3d velocity_W_;
+    Eigen::Vector3d velocity_B_;
     Eigen::Matrix3d R_B_W_;
     Eigen::Vector3d angular_velocity_B_;
     // References
