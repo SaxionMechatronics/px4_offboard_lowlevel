@@ -60,10 +60,6 @@ install(FILES
   DESTINATION lib
 )
 
-install(FILES
-  policy/controller.onnx
-  DESTINATION share/${PROJECT_NAME}/policy
-)
 
 install(TARGETS offboard_controller_node
   DESTINATION lib/${PROJECT_NAME})
@@ -79,6 +75,11 @@ install(PROGRAMS
 # Install directories
 install(DIRECTORY
   launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  policy
   DESTINATION share/${PROJECT_NAME}
 )
 

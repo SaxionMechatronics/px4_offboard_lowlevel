@@ -175,7 +175,15 @@ void ControllerNode::loadParams() {
 
     in_sitl_mode_ = this->get_parameter("sitl_mode").as_bool();
     control_mode_ = this->get_parameter("control_mode").as_int();
-    
+
+    // RL Policy
+    this->declare_parameter("policy.filename", "policy.onnx");
+    this->declare_parameter("policy.thrust_scale", 1.0);
+    this->declare_parameter("policy.rate_scale", 1.0);
+    controller_.loadPolicy(this->get_parameter("policy.filename").as_string());
+    controller_.setThrustScale(this->get_parameter("policy.thrust_scale").as_double());
+    controller_.setRateScale(this->get_parameter("policy.rate_scale").as_double());
+
     // Controller gains
     this->declare_parameter("control_gains.K_p_x", 0.0);
     this->declare_parameter("control_gains.K_p_y", 0.0);

@@ -43,6 +43,8 @@ class controller {
 public:
     controller();
     void calculateControllerOutput(Eigen::VectorXd *controller_rates_thrust);
+    void loadPolicy(const std::string policyFile);
+    float* forwardPolicy(std::vector<float> input_data);
 
     // Setters
     void setOdometry(const Eigen::Vector3d &position_W, const Eigen::Quaterniond &orientation_B_W, 
@@ -105,8 +107,18 @@ public:
         _gravity = gravity;
     }
 
+    void setThrustScale(const float thrustScale){
+        thrust_scale_ = thrustScale;
+    }
+
+    void setRateScale(const float rateScale){
+        rate_scale_ = rateScale;
+    }
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
+    std::vector<float> getObs();
+
     // UAV Parameter
     double _uav_mass;
     Eigen::Vector3d _inertia_matrix;
@@ -135,13 +147,16 @@ private:
     // Trigger
     float trigger_;
 
-    // ONXX Variables
+    // Policy Variables
     Ort::Env env_;
     Ort::SessionOptions session_options_;
     Ort::Session session_;
 
     std::string input_name_;
     std::string output_name_;
+
+    double thrust_scale_;
+    double rate_scale_;
 };
 
 #endif //CONTROLLER_CONTROLLER_H
