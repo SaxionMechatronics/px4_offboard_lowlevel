@@ -53,8 +53,6 @@ ControllerNode::ControllerNode()
             (status_topic_, qos, std::bind(&ControllerNode::vehicleStatusCallback, this, _1));
         command_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>
             (command_pose_topic_, 10, std::bind(&ControllerNode::commandPoseCallback, this, _1));
-        trigger_sub_ = this->create_subscription<std_msgs::msg::Float32>
-            (trigger_topic_, 10, std::bind(&ControllerNode::triggerCallback, this, _1));
 
         // Publishers
         attitude_setpoint_publisher_ = this->create_publisher<px4_msgs::msg::VehicleAttitudeSetpoint>
@@ -152,7 +150,6 @@ void ControllerNode::loadParams() {
     this->declare_parameter("topics_names.torque_setpoints_topic", "default");
     this->declare_parameter("topics_names.actuator_control_topic", "default");
     this->declare_parameter("topics_names.rates_setpoints_topic", "default");
-    this->declare_parameter("topics_names.trigger_topic", "default");
 
     command_pose_topic_ = this->get_parameter("topics_names.command_pose_topic").as_string();
     command_traj_topic_ = this->get_parameter("topics_names.command_traj_topic").as_string();
@@ -167,7 +164,6 @@ void ControllerNode::loadParams() {
     torque_setpoint_topic_ = this->get_parameter("topics_names.torque_setpoints_topic").as_string();
     actuator_control_topic_ = this->get_parameter("topics_names.actuator_control_topic").as_string();
     rates_setpoint_topic_ = this->get_parameter("topics_names.rates_setpoints_topic").as_string();
-    trigger_topic_ = this->get_parameter("topics_names.trigger_topic").as_string();
     
     // Load logic switches
     this->declare_parameter("sitl_mode", true);
@@ -450,10 +446,6 @@ void ControllerNode::vehicle_odometryCallback(const px4_msgs::msg::VehicleOdomet
                                 position, orientation, velocity, angular_velocity);
 
         controller_.setOdometry(position, orientation, velocity, angular_velocity);
-}
-
-void ControllerNode::triggerCallback(const std_msgs::msg::Float32::SharedPtr trigger_msg){
-    controller_.setTrigger(trigger_msg->data);
 }
 
 void ControllerNode::vehicleStatusCallback(const px4_msgs::msg::VehicleStatus::SharedPtr status_msg){

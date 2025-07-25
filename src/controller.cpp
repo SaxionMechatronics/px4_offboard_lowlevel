@@ -42,8 +42,6 @@ controller::controller()
       session_options_(),
       session_(nullptr)  // temp placeholder, real initialization in loadPolicy
 {
-    trigger_ = 0.0;
-
     session_options_.SetIntraOpNumThreads(1);
 }
 
@@ -69,7 +67,7 @@ void controller::loadPolicy(std::string policy_file) {
 std::vector<float> controller::getObs() {
     const Eigen::Vector3d e_p = r_position_W_ - position_W_;
 
-    std::vector<float> obs(19, 0.0f);
+    std::vector<float> obs(18, 0.0f);
     obs[0]  = e_p(0);
     obs[1]  = e_p(1);
     obs[2]  = e_p(2);
@@ -88,7 +86,6 @@ std::vector<float> controller::getObs() {
     obs[15] = angular_velocity_B_(0);
     obs[16] = angular_velocity_B_(1);
     obs[17] = angular_velocity_B_(2);
-    obs[18] = trigger_;
 
     return obs;
 }

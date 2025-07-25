@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
     policy:
-      filename: "x500_ifex.onnx"
+      filename: "x500_hover.onnx"
       thrust_scale: 32.0
       rate_scale: 4.0

@@ -1,12 +1,12 @@
 # Simulation Demo
 This file provides the steps needed to run the demo. The steps shown in ``instructions/setup.md`` must be completed first.
 
-> **WARNING:** This demo is not safe for use on real hardware, the circle trajector generator may cause agressive and unpredictable behavior upon takeoff.
+> **WARNING:** This demo has not been tested on real hardware, agressive and unpredictable behavior may occur.
 
 ## 1. Start the simulation
 Navigate to your PX4-Autopilot folder ande execute:
 ```bash
-make px4_sitl_nolockstep gz_rl_frame
+make px4_sitl_nolockstep gz_x500
 ```
 
 ## 2. Run the MicroXRCEAgent
@@ -24,8 +24,6 @@ ros2 launch px4_offboard_lowlevel ifex_sitl.launch.py
 ```
 
 ## 4. Start flying
-Enabling the trigger will cause the robot to crash, because the robot will anticipate an impulse but none is actually applied.
-
 1. Take off in position mode.
 2. Use ``ros2 topic echo /fmu/out/vehicle_odometry`` to monitor the UAVs current position.
 3. Send a setpoint at the current position (Flip Y and Z sign), for example:
@@ -33,10 +31,6 @@ Enabling the trigger will cause the robot to crash, because the robot will antic
     ros2 topic pub --once /command/pose geometry_msgs/msg/PoseStamped "{pose: {position: {x: 0.0, y: 0.0, z: 10.0}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}}"
     ```
 4. Switch to offboard mode in QGroundControl
-5. Send the trigger signal:
-    ```bash
-    ros2 topic pub --once /command/trigger std_msgs/msg/Float32 "{data: 1.0}"
-    ```
 
 <!--
 ### 4.2. Circle trajactory

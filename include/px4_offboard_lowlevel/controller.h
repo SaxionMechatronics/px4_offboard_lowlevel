@@ -75,10 +75,6 @@ public:
         r_yaw_rate = 0.0;
     }
 
-    void setTrigger(const float trigger) {
-        trigger_ = trigger;
-    } 
-
     void setKPositionGain(const Eigen::Vector3d &PositionGain){
         position_gain_ = PositionGain;
     }
@@ -143,9 +139,6 @@ private:
     Eigen::Matrix3d r_R_B_W_;
     double r_yaw;
     double r_yaw_rate;
-
-    // Trigger
-    float trigger_;
 
     // Policy Variables
     Ort::Env env_;

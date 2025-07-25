@@ -83,7 +83,6 @@ private:
     rclcpp::Subscription<px4_msgs::msg::VehicleOdometry>::SharedPtr vehicle_odometry_sub_;
     rclcpp::Subscription<rcl_interfaces::msg::ParameterEvent>::SharedPtr parameter_event_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr command_pose_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr trigger_sub_;
     
     // Publishers
     rclcpp::Publisher<px4_msgs::msg::ActuatorMotors>::SharedPtr actuator_motors_publisher_;
@@ -116,7 +115,6 @@ private:
     std::string torque_setpoint_topic_;
     std::string actuator_control_topic_;
     std::string rates_setpoint_topic_;
-    std::string trigger_topic_;
 
     // UAV Parameters
     double _arm_length;
@@ -155,7 +153,6 @@ private:
     void commandTrajectoryCallback(const trajectory_msgs::msg::MultiDOFJointTrajectoryPoint::SharedPtr& traj_msg);
     void vehicle_odometryCallback(const px4_msgs::msg::VehicleOdometry::SharedPtr odom_msg);
     void vehicleStatusCallback(const px4_msgs::msg::VehicleStatus::SharedPtr status_msg);
-    void triggerCallback(const std_msgs::msg::Float32::SharedPtr trigger_msg);
 
     void publishActuatorMotorsMsg(const Eigen::VectorXd& throttles);
     void publishThrustTorqueMsg(const Eigen::Vector4d& controller_output);

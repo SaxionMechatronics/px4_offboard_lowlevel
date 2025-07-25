@@ -1,6 +1,5 @@
 # PX4 Neural Offboard Control using ROS 2
-This package is an adapted version of the px4_offboard_lowlevel package, this version has implementations to deploy neural network control policies using the ONNX format. The control policy is also provided with a trigger signal as described in [RL-based Control of UAS Subject to
-Significant Disturbance](https://arxiv.org/abs/2504.08114).
+This package is an adapted version of the px4_offboard_lowlevel package, this version has implementations to deploy neural network control policies using the ONNX format. A policy for position control of a Holybro X500 is included in this repository as an example.
 
 # Contents
 ## [Package Setup](instructions/package_setup.md)
