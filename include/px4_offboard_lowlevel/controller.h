@@ -114,6 +114,10 @@ public:
     void setRateScale(const float rateScale){
         rate_scale_ = rateScale;
     }
+    
+    void setIncludeTrigger(const bool includeTrigger) {
+        include_trigger_ = includeTrigger;
+    }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
@@ -146,6 +150,7 @@ private:
 
     // Trigger
     float trigger_;
+    bool include_trigger_;
 
     // Policy Variables
     Ort::Env env_;

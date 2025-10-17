@@ -180,9 +180,11 @@ void ControllerNode::loadParams() {
     this->declare_parameter("policy.filename", "policy.onnx");
     this->declare_parameter("policy.thrust_scale", 1.0);
     this->declare_parameter("policy.rate_scale", 1.0);
+    this->declare_parameter("policy.observations.trigger", false);
     controller_.loadPolicy(this->get_parameter("policy.filename").as_string());
     controller_.setThrustScale(this->get_parameter("policy.thrust_scale").as_double());
     controller_.setRateScale(this->get_parameter("policy.rate_scale").as_double());
+    controller_.setIncludeTrigger(this->get_parameter("policy.observations.trigger").as_bool());
 
     // Controller gains
     this->declare_parameter("control_gains.K_p_x", 0.0);
@@ -458,6 +460,7 @@ void ControllerNode::triggerCallback(const std_msgs::msg::Float32::SharedPtr tri
 
 void ControllerNode::vehicleStatusCallback(const px4_msgs::msg::VehicleStatus::SharedPtr status_msg){
     current_status_ = *status_msg;
+
     if (current_status_.arming_state ==2){
         RCLCPP_INFO_ONCE(get_logger(),"ARMED - vehicle_status_msg.");
     }
@@ -571,7 +574,7 @@ void ControllerNode::updateControllerOutput() {
     if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output_wrench);
     else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output_wrench);
 
-    std::cout << "Thrust: " << controller_output[3] << "\tNormalized thrust: " << normalized_torque_thrust[3] << "\n";
+    // std::cout << "Thrust: " << controller_output[3] << "\tNormalized thrust: " << normalized_torque_thrust[3] << "\n";
 
     controller_output[3] = normalized_torque_thrust[3];
     

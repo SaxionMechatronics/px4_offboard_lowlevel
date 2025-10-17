@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    policy:
+      filename: "x500_hover.onnx"
+      thrust_scale: 32.0
+      rate_scale: 4.0
+      observations:
+        trigger: False

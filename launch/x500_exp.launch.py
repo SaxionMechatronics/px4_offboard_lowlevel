@@ -28,7 +28,7 @@ def generate_launch_description():
    config_4 = os.path.join(
       get_package_share_directory('px4_offboard_lowlevel'),
       'config', 'policy',
-      'x500_policy.yaml'
+      'x500_trigger.yaml'
       )
    
    return LaunchDescription([
