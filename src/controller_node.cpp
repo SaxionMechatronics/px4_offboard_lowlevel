@@ -104,8 +104,8 @@ void ControllerNode::loadParams() {
     this->declare_parameter("uav_parameters.gravity", 0.0);
     this->declare_parameter("uav_parameters.PWM_MIN", 0);
     this->declare_parameter("uav_parameters.PWM_MAX", 0);
-    this->declare_parameter("uav_parameters.input_scaling", 0);
-    this->declare_parameter("uav_parameters.zero_position_armed", 0);
+    this->declare_parameter("uav_parameters.SIM_GZ_EC_MAX", 0);
+    this->declare_parameter("uav_parameters.SIM_GZ_EC_MIN", 0);
     this->declare_parameter("uav_parameters.inertia.x", 0.0);
     this->declare_parameter("uav_parameters.inertia.y", 0.0);
     this->declare_parameter("uav_parameters.inertia.z", 0.0);
@@ -122,8 +122,8 @@ void ControllerNode::loadParams() {
     double _gravity = this->get_parameter("uav_parameters.gravity").as_double();
     _PWM_MIN = this->get_parameter("uav_parameters.PWM_MIN").as_int();
     _PWM_MAX = this->get_parameter("uav_parameters.PWM_MAX").as_int();
-    _input_scaling = this->get_parameter("uav_parameters.input_scaling").as_int();
-    _zero_position_armed = this->get_parameter("uav_parameters.zero_position_armed").as_int();
+    _SIM_GZ_EC_MAX = this->get_parameter("uav_parameters.SIM_GZ_EC_MAX").as_int();
+    _SIM_GZ_EC_MIN = this->get_parameter("uav_parameters.SIM_GZ_EC_MIN").as_int();
     double _inertia_x = this->get_parameter("uav_parameters.inertia.x").as_double();
     double _inertia_y = this->get_parameter("uav_parameters.inertia.y").as_double();
     double _inertia_z = this->get_parameter("uav_parameters.inertia.z").as_double();
@@ -220,18 +220,14 @@ void ControllerNode::compute_ControlAllocation_and_ActuatorEffect_matrices() {
                 -kS, kS, -kS, kS,
                 -1, -1, 1, 1,
                 1, 1, 1, 1;
-        mixing_matrix <<   -0.495384,  -0.707107,  -0.765306,   1.0,
-                 0.495384, 0.707107,  -1.0,   1.0,
-                0.495384,  -0.707107, 0.765306,   1.0,
-                -0.495384, 0.707107, 1.0,   1.0;
+        mixing_matrix <<   -0.43773276,  -0.70710677,  -0.909091,   1.0,
+                            0.43773273, 0.70710677	,  -1.0     ,   1.0,
+                            0.43773276,  -0.70710677,  0.909091  ,   1.0,
+                            -0.43773273, 0.70710677	,  1.0       ,   1.0;
         torques_and_thrust_to_rotor_velocities_.resize(4, 4);
-        throttles_to_normalized_torques_and_thrust_.resize(4,4);
-        // Hardcoded because the calculation of pesudo-inverse is not accurate
-        throttles_to_normalized_torques_and_thrust_ << 
-        -0.5718,    0.4376,    0.5718,   -0.4376,
-        -0.3536,    0.3536,   -0.3536,    0.3536,
-        -0.2832 ,   -0.2832 ,  0.2832 ,  0.2832,
-        0.2500 ,   0.2500 ,   0.2500 ,   0.2500;
+        throttles_to_normalized_torques_and_thrust_.resize(4,4); // This is the inverse of the mixing matrix
+        // Calculate inverse mixing matrix: throttles to normalized torques and thrust
+        throttles_to_normalized_torques_and_thrust_ = mixing_matrix.completeOrthogonalDecomposition().pseudoInverse();
     }
     else {
         std::cout<<("[controller] Unknown UAV parameter num_of_arms. Cannot calculate control matrices\n");
@@ -322,8 +318,8 @@ void ControllerNode::px4InverseSITL
     // Control allocation: Wrench to Rotational velocities (omega)
     omega = torques_and_thrust_to_rotor_velocities_ * (*wrench);
     omega = omega.cwiseSqrt();
-    *throttles = (omega - (_zero_position_armed * ones_temp));
-    *throttles /= (_input_scaling);
+    *throttles = (omega - (_SIM_GZ_EC_MIN * ones_temp));
+    *throttles /= (_SIM_GZ_EC_MAX - _SIM_GZ_EC_MIN);
     // Inverse Mixing: throttles to normalized torques and thrust
     *normalized_torque_and_thrust = throttles_to_normalized_torques_and_thrust_ * *throttles;
 }

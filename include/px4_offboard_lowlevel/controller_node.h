@@ -121,8 +121,8 @@ private:
     Eigen::Vector3d _omega_to_pwm_coefficients;
     int _PWM_MIN;
     int _PWM_MAX;
-    int _input_scaling;
-    int _zero_position_armed;
+    int _SIM_GZ_EC_MAX;
+    int _SIM_GZ_EC_MIN;
     Eigen::MatrixXd torques_and_thrust_to_rotor_velocities_;
     Eigen::MatrixXd throttles_to_normalized_torques_and_thrust_;
 
