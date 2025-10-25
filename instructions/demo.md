@@ -6,7 +6,7 @@ This file provides the steps needed to run the demo. The steps shown in ``instru
 ## 1. Start the simulation
 Navigate to your PX4-Autopilot folder ande execute:
 ```bash
-make px4_sitl gazebo-classic_iris
+make px4_sitl gz_x500
 ```
 
 ## 2. Run the MicroXRCEAgent
@@ -20,7 +20,7 @@ MicroXRCEAgent udp4 -p 8888
 source ~/llc_ws/install/setup.sh
 
 # Start the simulation
-ros2 launch px4_offboard_lowlevel iris_sitl.launch.py
+ros2 launch px4_offboard_lowlevel x500_sitl.launch.py
 ```
 
 ## 4. Start flying

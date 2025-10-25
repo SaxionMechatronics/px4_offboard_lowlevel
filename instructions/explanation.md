@@ -44,4 +44,4 @@ setTrajectoryPoint(const Eigen::Vector3d &position_W, const Eigen::Quaterniond &
 
 ## Working with another vehicles
 
-Check the parameters that needs to be defined for each vehicle in `./config/uav_parameters/iris_param.yaml`. By creating another parameters yaml file and another launch file based on `./launch/iris_sitl.launch.py`, you should be able to fly another vehicle with the package.
+Check the parameters that needs to be defined for each vehicle in `./config/uav_parameters/x500_param.yaml`. By creating another parameters yaml file and another launch file based on `./launch/x500_sitl.launch.py`, you should be able to fly another vehicle with the package.
