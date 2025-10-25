@@ -46,7 +46,7 @@ throttles_to_normalized_torques_and_thrust = pinv(mixing_matrix);
 omega_sq = torques_and_thrust_to_rotor_velocities * wrench;
 omega = sqrt(omega_sq);
 % From rotational velocities to motors throttles based on PX4-SITL models
-throttles = (omega - SIM_GZ_EC_MIN)./SIM_GZ_EC_MAX;
+throttles = (omega - SIM_GZ_EC_MIN)./(SIM_GZ_EC_MAX - SIM_GZ_EC_MIN);
 % Inverse Mixing: throttles to normalized torques and thrust
 normalized_torque_and_thrust = throttles_to_normalized_torques_and_thrust * throttles;
 end
