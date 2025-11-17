@@ -7,7 +7,7 @@
       command_pose_topic: "command/pose"
       command_traj_topic: "command/trajectory"
       odometry_topic: "fmu/out/vehicle_odometry"
-      status_topic: "fmu/out/vehicle_status"
+      status_topic: "fmu/out/vehicle_status_v1"
       battery_status_topic: "fmu/out/battery_status"
       actuator_status_topic: "/fmu/out/actuator_motors"
       offboard_control_topic: "/fmu/in/offboard_control_mode"
