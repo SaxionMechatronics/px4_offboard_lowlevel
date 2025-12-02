@@ -43,10 +43,10 @@ For more information on ROS 2 refer to the [ROS 2 Documentation](https://docs.ro
 1. [Install PX4](#install-px4) 
    - As explained above
 
-2. [ROS2 Installation](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
-   - Follow this [link](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html) to install ROS2
-   - Version : Humble
-   - Ubuntu Version : [Jammy Jellyfish (22.04)](https://releases.ubuntu.com/jammy/) 
+2. [ROS2 Installation](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)
+   - Follow this [link](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html) to install ROS2
+   - Version : Jazzy
+   - Ubuntu Version : [Noble Numbat (24.04.1)](https://releases.ubuntu.com/noble/) 
 
 3. Install Python dependencies 
 ```bash
@@ -92,7 +92,7 @@ For more information on ROS 2 refer to the [ROS 2 Documentation](https://docs.ro
     cd ~/nnc/PX4-Autopilot
 
     # Start a PX4 Gazebo simulation using:
-    make px4_sitl_nolockstep gz_rl_frame
+    make px4_sitl_nolockstep gz_x500
 
     # The agent and client are now running they should connect.
 ```

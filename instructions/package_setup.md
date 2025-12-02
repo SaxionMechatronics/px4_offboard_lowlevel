@@ -15,7 +15,7 @@ mkdir -p ~/nnc/nnc_ws/src
 ```bash
 cd ~/nnc/nnc_ws/src
 git clone https://github.com/SaxionMechatronics/px4_offboard_lowlevel.git
-git checkout nn-control
+git checkout nn-control-ifex
 ```
 
 ### 1.3. Clone px4_msgs
@@ -23,9 +23,6 @@ This package has been confirmed to work with a certain commit of px4_msgs, you c
 ```bash
 cd ~/nnc/nnc_ws/src
 git clone https://github.com/PX4/px4_msgs.git
-
-cd px4_msgs
-# git reset --hard 5f8e3c59619666020a546c5264498c6606eca15a
 ```
 
 ### 1.4. Build
@@ -34,6 +31,7 @@ cd ~/nnc/nnc_ws/
 colcon build --symlink-install
 ```
 
+<!--
 ## 2. PX4 Setup
 
 ### 2.1. Change set of ROS 2 PX4 topics
@@ -49,3 +47,5 @@ I hate it, so here it is:
 ```bash
 cp /PATH_TO/src/px4_offboard_lowlevel/px4-resources/empty.world PATH_TO/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/worlds/
 ```
+-->
+

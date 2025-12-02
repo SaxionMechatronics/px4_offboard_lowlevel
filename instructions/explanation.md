@@ -19,7 +19,7 @@ In the current implementation the controller_rate_thrust is used to set the desi
 
 The `model_path` variable defines the location of the onnx model that is used, by default this is `policy/controller.onnx`.
 
-## Other interfaces
+<!--## Other interfaces
 ### UAV Parameters
 UAV Parameters are passed to the controller using the following functions:
 ```CPP
@@ -48,4 +48,4 @@ setTrajectoryPoint(const Eigen::Vector3d &position_W, const Eigen::Quaterniond &
 
 ## Working with another vehicles
 
-Check the parameters that needs to be defined for each vehicle in `./config/uav_parameters/iris_param.yaml`. By creating another parameters yaml file and another launch file based on `./launch/iris_sitl.launch.py`, you should be able to fly another vehicle with the package.
+Check the parameters that needs to be defined for each vehicle in `./config/uav_parameters/iris_param.yaml`. By creating another parameters yaml file and another launch file based on `./launch/iris_sitl.launch.py`, you should be able to fly another vehicle with the package.-->
