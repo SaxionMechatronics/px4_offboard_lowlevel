@@ -1,7 +1,7 @@
 # Simulation Demo
 This file provides the steps needed to run the demo. The steps shown in ``instructions/setup.md`` must be completed first.
 
-> **WARNING:** This demo is not safe for use on real hardware, the circle trajector generator may cause agressive and unpredictable behavior upon takeoff.
+> **WARNING:** This demo may result in upredictable behaviour, only use in a closed off controlled environment.
 
 ## 1. Start the simulation
 Navigate to your PX4-Autopilot folder ande execute:
