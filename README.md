@@ -13,17 +13,20 @@ You can switch between the different control modes using ROS 2 parameter.
 
 This videos below shows a simulated quadrotor controlled with this package with [Direct Actuator commands](https://docs.px4.io/main/en/msg_docs/ActuatorMotors.html).
 
-![Direct-Actuator-commands](./instructions/media/iris-sitl-act-cmds.gif)
+![Direct-Actuator-commands](./instructions/media/iris-sitl-act-cmds-harmonic.gif)
 
 # Contents
-## [Package Setup](instructions/package_setup.md)
-Guide on the installation of the low level controller package and its dependencies.
+## Package Setup
+Guide on the installation of the low level controller package and its dependencies. 
+[View Package Setup Instructions](instructions/package_setup.md)
 
-## [Explanation](instructions/explanation.md)
-Explanation of the controller node and where you can implement your own controller.
+## Explanation
+Explanation of the controller node and where you can implement your own controller. 
+[View Explanation](instructions/explanation.md)
 
-## [Simulation Demo](instructions/demo.md)
+## Simulation Demo
 Instructions to run the demo using the included circle trajector generator.
+[View Simulation Demo Instructions](instructions/demo.md)
 
 # Acknowledgments
 
