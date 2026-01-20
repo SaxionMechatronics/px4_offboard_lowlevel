@@ -42,14 +42,30 @@ public:
     controller();
     void calculateControllerOutput(Eigen::VectorXd *controller_torque_thrust, Eigen::Quaterniond *desired_quaternion);
     void calculateFBLControllerOutout(Eigen::VectorXd *controller_torque_thrust);
+    void calculateQuasiControllerOutput(Eigen::VectorXd *controller_torque_thrust);
 
     // Setters
     void setOdometry(const Eigen::Vector3d &position_W, const Eigen::Quaterniond &orientation_B_W, 
         const Eigen::Vector3d &velocity_B, const Eigen::Vector3d &angular_velocity_B){
-        R_B_W_ = orientation_B_W.toRotationMatrix();
+        // Stored in ENU world frame (as provided by ControllerNode).
+        orientation_B_W_ = orientation_B_W.normalized();
+        R_B_W_ = orientation_B_W_.toRotationMatrix();
         position_W_ = position_W;
         velocity_W_ = R_B_W_ * velocity_B;
         angular_velocity_B_ = angular_velocity_B;
+    }
+
+    // Store raw PX4 odometry without applying ROS frame conversions.
+    // Expected convention: world = NED, body = FRD (PX4 aerospace convention).
+    void setOdometryPX4Raw(const Eigen::Vector3d &position_W_NED,
+                           const Eigen::Quaterniond &orientation_B_W_NED,
+                           const Eigen::Vector3d &velocity_W_NED,
+                           const Eigen::Vector3d &angular_velocity_B_FRD) {
+        position_W_NED_ = position_W_NED;
+        velocity_W_NED_ = velocity_W_NED;
+        orientation_B_W_NED_ = orientation_B_W_NED.normalized();
+        R_B_W_NED_ = orientation_B_W_NED_.toRotationMatrix();
+        angular_velocity_B_FRD_ = angular_velocity_B_FRD;
     }
 
     void setTrajectoryPoint(const Eigen::Vector3d &position_W, const Eigen::Vector3d &velocity_W, const Eigen::Vector3d &acceleration_W
@@ -118,7 +134,15 @@ private:
     Eigen::Vector3d position_W_;
     Eigen::Vector3d velocity_W_;
     Eigen::Matrix3d R_B_W_;
+    Eigen::Quaterniond orientation_B_W_;
     Eigen::Vector3d angular_velocity_B_;
+
+    // Raw PX4 states (world NED, body FRD) for quasi-controller
+    Eigen::Vector3d position_W_NED_;
+    Eigen::Vector3d velocity_W_NED_;
+    Eigen::Matrix3d R_B_W_NED_;
+    Eigen::Quaterniond orientation_B_W_NED_;
+    Eigen::Vector3d angular_velocity_B_FRD_;
     // References
     Eigen::Vector3d r_position_W_;
     Eigen::Vector3d r_velocity_W_;

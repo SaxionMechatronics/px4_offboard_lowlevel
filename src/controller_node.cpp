@@ -425,6 +425,13 @@ void ControllerNode::vehicle_odometryCallback(const px4_msgs::msg::VehicleOdomet
                                 position, orientation, velocity, angular_velocity);
 
         controller_.setOdometry(position, orientation, velocity, angular_velocity);
+
+        // Also store the raw PX4 values (world NED, body FRD) for the quasi-controller.
+        const Eigen::Vector3d position_ned(odom_msg->position[0], odom_msg->position[1], odom_msg->position[2]);
+        const Eigen::Vector3d velocity_ned(odom_msg->velocity[0], odom_msg->velocity[1], odom_msg->velocity[2]);
+        const Eigen::Quaterniond q_BW_ned(odom_msg->q[0], odom_msg->q[1], odom_msg->q[2], odom_msg->q[3]);
+        const Eigen::Vector3d omega_frd(odom_msg->angular_velocity[0], odom_msg->angular_velocity[1], odom_msg->angular_velocity[2]);
+        controller_.setOdometryPX4Raw(position_ned, q_BW_ned, velocity_ned, omega_frd);
 }
 
 void ControllerNode::vehicleStatusCallback(const px4_msgs::msg::VehicleStatus::SharedPtr status_msg){
@@ -515,6 +522,7 @@ void ControllerNode::updateControllerOutput() {
     Eigen::VectorXd controller_output;
     Eigen::Quaterniond desired_quaternion;
     Eigen::VectorXd controller_output_FBL;
+    Eigen::VectorXd controller_output_Quasi;
     Eigen::Vector4d normalized_torque_thrust;
     Eigen::VectorXd throttles;
         
@@ -538,11 +546,11 @@ void ControllerNode::updateControllerOutput() {
             publishThrustTorqueMsg(normalized_torque_thrust);
             break;
         case 3:
-            controller_.calculateControllerOutput(&controller_output, &desired_quaternion);
+            controller_.calculateQuasiControllerOutput(&controller_output_Quasi);
             // Normalize the controller output
-            if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output);
-            else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output);
-            publishActuatorMotorsMsg(throttles);
+            if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output_Quasi);
+            else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output_Quasi);
+            publishActuatorMotorsMsg(normalized_torque_thrust);
             break;
         default:
             controller_.calculateControllerOutput(&controller_output, &desired_quaternion);

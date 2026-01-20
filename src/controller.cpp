@@ -40,9 +40,51 @@
 #include <iostream>
 #include <cmath>
 
+namespace {
+inline double clampd(double v, double lo, double hi) {
+    return (v < lo) ? lo : ((v > hi) ? hi : v);
+}
+
+// MATLAB equivalent: rotm2eul(R, "YXZ")
+// Assumes rotation matrix composition: R = Ry(theta) * Rx(phi) * Rz(psi)
+// Returns [theta, phi, psi].
+inline Eigen::Vector3d rotm2eul_YXZ(const Eigen::Matrix3d &R) {
+    const double phi = -std::asin(clampd(R(1, 2), -1.0, 1.0));
+    const double cphi = std::cos(phi);
+
+    double theta = 0.0;
+    double psi = 0.0;
+
+    // Non-singular case
+    if (std::abs(cphi) > 1e-9) {
+        theta = std::atan2(R(0, 2), R(2, 2));
+        psi = std::atan2(R(1, 0), R(1, 1));
+    } else {
+        // Gimbal lock: fall back to a reasonable decomposition
+        // (theta and psi become coupled; pick theta = 0)
+        theta = 0.0;
+        psi = std::atan2(-R(0, 1), R(0, 0));
+    }
+
+    return Eigen::Vector3d(theta, phi, psi);
+}
+} // namespace
+
 controller::controller(){
     zeta1 = 9.81;
     zeta2 = 0.0;
+
+    position_W_.setZero();
+    velocity_W_.setZero();
+    R_B_W_.setIdentity();
+    orientation_B_W_.setIdentity();
+    angular_velocity_B_.setZero();
+
+    position_W_NED_.setZero();
+    velocity_W_NED_.setZero();
+    R_B_W_NED_.setIdentity();
+    orientation_B_W_NED_.setIdentity();
+    angular_velocity_B_FRD_.setZero();
 }
 
 void controller::calculateFBLControllerOutout(
@@ -290,4 +332,373 @@ void controller::calculateControllerOutput(
 
     // Output the wrench
     *controller_torque_thrust << tau, thrust;
+}
+
+void controller::calculateQuasiControllerOutput(Eigen::VectorXd *controller_torque_thrust) {
+    assert(controller_torque_thrust);
+    controller_torque_thrust->resize(4);
+
+    // Frame alignment note:
+    // MATLAB uses p,v in NED world frame, OM in body frame, R as body->world.
+    // Use raw PX4 states (world NED, body FRD) provided via setOdometryPX4Raw().
+    const Eigen::Vector3d p_W = position_W_NED_;
+    const Eigen::Vector3d v_W = velocity_W_NED_;
+    const Eigen::Quaterniond q_BW_NED = orientation_B_W_NED_;
+    const Eigen::Matrix3d R_BW_NED = R_B_W_NED_; // body(FRD)->world(NED)
+    const Eigen::Vector3d omega_B_FRD = angular_velocity_B_FRD_;
+
+    // Local variables matching MATLAB names
+    const Eigen::Vector3d p = p_W;
+    const Eigen::Vector3d v = v_W;
+    const Eigen::Matrix3d R = R_BW_NED;
+    const Eigen::Vector3d OM = omega_B_FRD;
+
+    // === MATLAB snippet equivalents ===
+    // r11 = R(1,1); ... (MATLAB is 1-based; C++ is 0-based)
+    const double r11 = R(0,0);
+    const double r12 = R(0,1);
+    const double r13 = R(0,2);
+    const double r21 = R(1,0);
+    const double r22 = R(1,1);
+    const double r23 = R(1,2);
+    const double r31 = R(2,0);
+    const double r32 = R(2,1);
+    const double r33 = R(2,2);
+
+    // Euler YXZ (theta, phi, psi) like rotm2eul(R,"YXZ"), computed from quaternion.
+    const double qw = q_BW_NED.w();
+    const double qx = q_BW_NED.x();
+    const double qy = q_BW_NED.y();
+    const double qz = q_BW_NED.z();
+
+    // Only the needed rotation matrix terms (from quaternion) to match the existing YXZ extraction.
+    const double m02 = 2.0 * (qx * qz + qw * qy);
+    const double m12 = 2.0 * (qy * qz - qw * qx);
+    const double m10 = 2.0 * (qx * qy + qw * qz);
+    const double m11 = 1.0 - 2.0 * (qx * qx + qz * qz);
+
+    const double sx = -m12;
+    const double phi = std::asin(clampd(sx, -1.0, 1.0));
+    const double cx = std::cos(phi);
+    const double sy = (std::abs(cx) > 1e-6) ? (m02 / cx) : 0.0;
+    const double theta = std::asin(clampd(sy, -1.0, 1.0));
+    const double psi = std::atan2(m10, m11);
+    const Eigen::Vector3d eta(theta, phi, psi);
+
+    // Relabeling for Maple
+    const double p__1 = p(0);
+    const double p__2 = p(1);
+    const double p__3 = p(2);
+    const double v__1 = v(0);
+    const double v__2 = v(1);
+    const double v__3 = v(2);
+
+    // MATLAB: Omega__1 = OM(1); ...
+    const double Omega__1 = OM(0);
+    const double Omega__2 = OM(1);
+    const double Omega__3 = OM(2);
+
+    (void)r11; (void)r12; (void)r13; (void)r21; (void)r22; (void)r23; (void)r31; (void)r32; (void)r33;
+    (void)p__1; (void)p__2; (void)p__3;
+    (void)v__1; (void)v__2; (void)v__3;
+    (void)Omega__1; (void)Omega__2; (void)Omega__3;
+
+    // Physical parameters from main_quasi.m
+    static const double r1 = 5.0;
+    static const double r2 = -3.0;
+    static const double vd = 0.01;
+    static const double m = 1.725;
+    static const double g = 9.81;
+    static const Eigen::Matrix3d J = (Eigen::Matrix3d() << 
+        0.029125*3, 0,          0,
+        0,          0.029125*3, 0,
+        0,          0,          0.055225*3).finished();
+
+    // MATLAB: J__1 = J(1,1); J__2 = J(2,2); J__3 = J(3,3);
+    const double J__1 = J(0,0);
+    const double J__2 = J(1,1);
+    const double J__3 = J(2,2);
+
+    // Gains (initialize here instead of reading Gains.m)
+    // K1 multiplies [h1; h1_dot; h1_ddot; h1_dddot]
+    // K2 multiplies [h2; h2_dot]
+    // K3 multiplies [h3; h3_dot; h3_ddot]
+    // K4 multiplies [h4; h4_dot]
+    static const Eigen::Vector4d K1( /*k11*/0.0, /*k12*/0.0, /*k13*/0.0, /*k14*/0.0 );
+    static const Eigen::Vector2d K2( /*k21*/0.0, /*k22*/0.0 );
+    static const Eigen::Vector3d K3( /*k31*/0.0, /*k32*/0.0, /*k33*/0.0 );
+    static const Eigen::Vector2d K4( /*k41*/0.0, /*k42*/0.0 );
+
+    // MATLAB: k__21 = K2(1); k__22 = K2(2);
+    const double k__21 = K2(0);
+    const double k__22 = K2(1);
+
+    // Helper functions for MATLAB-style trig
+    const auto sec = [](double a) { return 1.0 / std::cos(a); };
+    const auto sq = [](double a) { return a * a; };
+
+    // MATLAB: e3 = [0;0;1];
+    const Eigen::Vector3d e3(0.0, 0.0, 1.0);
+    (void)e3;
+
+    // MATLAB:
+    // W =[sin(psi) * sec(phi) cos(psi) * sec(phi) 0;...
+    //     cos(psi) -sin(psi) 0;...
+    //     sin(psi) * tan(phi) cos(psi) * tan(phi) 1;];
+    const double sec_phi = sec(phi);
+    const double tan_phi = std::tan(phi);
+    const double tan_theta = std::tan(theta);
+    const double sec_theta = sec(theta);
+
+    Eigen::Matrix3d W;
+    W << std::sin(psi) * sec_phi, std::cos(psi) * sec_phi, 0.0,
+         std::cos(psi),          -std::sin(psi),         0.0,
+         std::sin(psi) * tan_phi, std::cos(psi) * tan_phi, 1.0;
+
+    // MATLAB: eta_dt = W * OM;
+    const Eigen::Vector3d eta_dt = W * OM;
+    (void)eta_dt;
+
+    // MATLAB W_dt (copied from your script)
+    Eigen::Matrix3d W_dt;
+    W_dt <<
+        sec_phi * (tan_phi * sq(std::cos(psi)) * Omega__2 + (std::sin(psi) * (Omega__2 * sec_phi + Omega__1) * tan_phi + Omega__3) * std::cos(psi) + sec_phi * sq(std::sin(psi)) * tan_phi * Omega__1),
+        sec_phi * (-sq(std::sin(psi)) * tan_phi * Omega__1 + (std::cos(psi) * (Omega__1 * sec_phi - Omega__2) * tan_phi - Omega__3) * std::sin(psi) + sq(std::cos(psi)) * Omega__2 * sec_phi * tan_phi),
+        0.0,
+        -std::sin(psi) * (Omega__3 + tan_phi * (Omega__1 * std::sin(psi) + Omega__2 * std::cos(psi))),
+        -std::cos(psi) * (Omega__3 + tan_phi * (Omega__1 * std::sin(psi) + Omega__2 * std::cos(psi))),
+        0.0,
+        sq(tan_phi) * sq(std::cos(psi)) * Omega__2 + ((Omega__2 * std::pow(sec_phi, 3) + sq(tan_phi) * Omega__1) * std::sin(psi) + Omega__3 * tan_phi) * std::cos(psi) + sq(std::sin(psi)) * Omega__1 * std::pow(sec_phi, 3) - sq(std::sin(psi)) * sq(tan_phi) * Omega__1 + ((Omega__1 * std::pow(sec_phi, 3) - Omega__2 * sq(tan_phi)) * std::cos(psi) - Omega__3 * tan_phi) * std::sin(psi) + sq(std::cos(psi)) * Omega__2 * std::pow(sec_phi, 3),
+        0.0,
+        0.0;
+    (void)W_dt;
+
+    // ======================
+    // The output h
+    // ======================
+    const double h1 = sq(p__1) + sq(p__2) - sq(r1);
+    const double h2 = p__3 - r2;
+    const double h3 = -(vd * std::sqrt(sq(p__1) + sq(p__2)) + p__1 * v__2 - p__2 * v__1) * std::pow(sq(p__1) + sq(p__2), -0.5);
+    const double h4 = psi - std::atan2(p__2, p__1);
+
+    // 1st time derivative of h
+    const double h1__dt = 2.0 * p__1 * v__1 + 2.0 * p__2 * v__2;
+    const double h2__dt = v__3;
+    const double h3__dt = -sec_theta * (-std::cos(theta) * (p__1 * v__1 + p__2 * v__2) * (p__1 * v__2 - p__2 * v__1) + (p__1 * tan_phi + p__2 * std::sin(theta)) * (g + k__21 * (p__3 - r2) + k__22 * v__3) * (sq(p__1) + sq(p__2))) * std::pow(sq(p__1) + sq(p__2), -1.5);
+    const double h4__dt = v__1 * p__2 / (sq(p__1) + sq(p__2)) - v__2 * p__1 / (sq(p__1) + sq(p__2)) + std::sin(psi) * tan_phi * Omega__1 + std::cos(psi) * tan_phi * Omega__2 + Omega__3;
+
+    // 2nd time derivative of h1 and h3
+    const double h1__ddt = (2.0 * sq(v__1)) + (2.0 * sq(v__2)) - 2.0 * (g + k__21 * (p__3 - r2) + k__22 * v__3) * (p__1 * tan_theta - p__2 * tan_phi * sec_theta);
+
+    const double h3__ddt = -std::pow(sec_theta, 2) * (2.0 * (p__1 * v__2 - p__2 * v__1) * (sq(p__2) * (-sq(v__1) / 2.0 + sq(v__2)) + 3.0 * p__1 * p__2 * v__1 * v__2 + (sq(v__1) - sq(v__2) / 2.0) * sq(p__1)) * sq(std::cos(theta)) +
+        ((-v__3 * p__2 * (sq(p__1) + sq(p__2)) * sq(k__22) + ((2.0 * sq(p__1) * v__2 - 3.0 * p__1 * p__2 * v__1 - sq(p__2) * v__2) * v__3 + k__21 * p__2 * (sq(p__1) + sq(p__2)) * (r2 - p__3)) * k__22 + k__21 * p__2 * (sq(p__1) + sq(p__2)) * v__3 + 2.0 * (sq(p__1) * v__2 - 3.0 / 2.0 * p__1 * p__2 * v__1 - sq(p__2) * v__2 / 2.0) * (k__21 * (p__3 - r2) + g)) * std::sin(theta) +
+        (g + k__21 * (p__3 - r2) + k__22 * v__3) * std::pow(sec_phi, 2) * p__1 * Omega__1 * (sq(p__1) + sq(p__2)) * std::cos(psi) -
+        (g + k__21 * (p__3 - r2) + k__22 * v__3) * std::sin(psi) * p__1 * Omega__2 * (sq(p__1) + sq(p__2)) * std::pow(sec_phi, 2) -
+        tan_phi * (v__3 * p__1 * (sq(p__1) + sq(p__2)) * sq(k__22) + ((sq(p__1) * v__1 + 3.0 * p__1 * p__2 * v__2 - 2.0 * sq(p__2) * v__1) * v__3 - k__21 * p__1 * (sq(p__1) + sq(p__2)) * (r2 - p__3)) * k__22 - k__21 * p__1 * (sq(p__1) + sq(p__2)) * v__3 + (sq(p__1) * v__1 + 3.0 * p__1 * p__2 * v__2 - 2.0 * sq(p__2) * v__1) * (k__21 * (p__3 - r2) + g))) * (sq(p__1) + sq(p__2)) * std::cos(theta) +
+        (Omega__1 * std::sin(psi) + Omega__2 * std::cos(psi)) * (g + k__21 * (p__3 - r2) + k__22 * v__3) * sec_phi * (tan_phi * std::sin(theta) * p__1 + p__2) * std::pow(sq(p__1) + sq(p__2), 2)) * std::pow(sq(p__1) + sq(p__2), -2.5);
+
+    // 3rd time derivative of h1
+    const double h1__dddt = (2.0 * (Omega__1 * std::sin(psi) + Omega__2 * std::cos(psi)) * p__2 * tan_theta * (g + k__21 * (p__3 - r2) + k__22 * v__3) * tan_phi * sec_phi +
+        2.0 * (std::cos(psi) * Omega__1 - std::sin(psi) * Omega__2) * p__2 * (g + k__21 * (p__3 - r2) + k__22 * v__3) * sq(tan_phi) +
+        ((((2.0 * r2 - 2.0 * p__3) * k__22 + 2.0 * v__3) * p__2 - 6.0 * v__2 * (r2 - p__3)) * k__21 - 2.0 * sq(k__22) * p__2 * v__3 + 6.0 * v__2 * (k__22 * v__3 + g)) * tan_phi +
+        2.0 * (Omega__1 * std::cos(psi) * p__2 - Omega__2 * std::sin(psi) * p__2 + std::sin(theta) * (k__22 * p__1 - (2.0 * v__1))) * (g + k__21 * (p__3 - r2) + k__22 * v__3)) * sec_theta -
+        2.0 * (1.0 + sq(tan_theta)) * (Omega__1 * std::sin(psi) + Omega__2 * std::cos(psi)) * (g + k__21 * (p__3 - r2) + k__22 * v__3) * p__1 * sec_phi -
+        2.0 * tan_theta * ((p__1 * v__3 - v__1 * (r2 - p__3)) * k__21 + g * k__22 * p__1 + v__1 * (k__22 * v__3 + g));
+
+    // Aux inputs
+    const double nu__1 = -K1.dot(Eigen::Vector4d(h1, h1__dt, h1__ddt, h1__dddt));
+    const double nu__2 = -K2.dot(Eigen::Vector2d(h2, h2__dt));
+    const double nu__3 = -K3.dot(Eigen::Vector3d(h3, h3__dt, h3__ddt));
+    const double nu__4 = -K4.dot(Eigen::Vector2d(h4, h4__dt));
+
+    // QSF thrust
+    const double denom = (std::cos(theta) * std::cos(phi));
+    const double u__t = m * (g - nu__2) / denom;
+
+    // ======================
+    // tau (MATLAB: neat way)
+    // ======================
+    const Eigen::Vector3d dh_1(2.0 * p__1, 2.0 * p__2, 0.0);
+    const Eigen::Vector3d dh_2(0.0, 0.0, 1.0);
+
+    const Eigen::Vector3d cross_dh12 = dh_1.cross(dh_2);
+    const double cross_norm = cross_dh12.norm();
+    Eigen::Vector3d rho = Eigen::Vector3d::Zero();
+    if (cross_norm > 1e-12) {
+        rho = cross_dh12 / cross_norm;
+    }
+
+    const double cospsi = std::cos(psi);
+    const double sinpsi = std::sin(psi);
+    const double costh = std::cos(theta);
+    const double sinth = std::sin(theta);
+    const double tanth = std::tan(theta);
+
+    // b1, b3, b4 (direct translation from MATLAB)
+    const double b1 = 2.0 * (-(k__22 * v__3 + g + k__21 * (p__3 - r2)) * (-p__2 * (2.0 * tan_phi * J__1 * J__2 * std::pow(cospsi * Omega__2 + sinpsi * Omega__1, 2.0) * std::pow(tanth, 2.0)
+        + (Omega__1 * Omega__2 * std::pow(cospsi, 2.0) * tan_phi * J__1 * J__2 + J__1 * (tan_phi * J__2 * (Omega__1 - Omega__2) * (Omega__1 + Omega__2) * sinpsi - Omega__1 * Omega__3 * (J__1 - J__2 - J__3)) * cospsi
+        - sinpsi * (sinpsi * tan_phi * J__1 * Omega__1 + Omega__3 * (J__1 - J__2 + J__3)) * Omega__2 * J__2) * std::sin(phi) * tanth
+        + Omega__3 * (-Omega__2 * J__2 * (J__1 - J__2 + J__3) * cospsi + Omega__1 * sinpsi * J__1 * (J__1 - J__2 - J__3))) * sec_theta
+        + (2.0 * J__1 * J__2 * std::pow(cospsi * Omega__2 + sinpsi * Omega__1, 2.0) * tanth
+        + (Omega__1 * Omega__2 * std::pow(cospsi, 2.0) * tan_phi * J__1 * J__2 + J__1 * (tan_phi * J__2 * (Omega__1 - Omega__2) * (Omega__1 + Omega__2) * sinpsi - Omega__1 * Omega__3 * (J__1 - J__2 - J__3)) * cospsi
+        - sinpsi * (sinpsi * tan_phi * J__1 * Omega__1 + Omega__3 * (J__1 - J__2 + J__3)) * Omega__2 * J__2) * std::cos(phi)) * p__1 * (1.0 + std::pow(tanth, 2.0))) * std::pow(sec_phi, 2.0)
+        - 2.0 * J__1 * ((-costh * (k__22 * v__3 + g + k__21 * (p__3 - r2)) * k__22 * p__1 * std::pow(tanth, 2.0) / 2.0
+        + (-3.0 / 2.0 * (k__22 * v__3 + g + k__21 * (p__3 - r2)) * p__2 * Omega__1 * (std::pow(tan_phi, 2.0) + 2.0 / 3.0) * cospsi
+        + 3.0 / 2.0 * (k__22 * v__3 + g + k__21 * (p__3 - r2)) * p__2 * Omega__2 * (std::pow(tan_phi, 2.0) + 2.0 / 3.0) * sinpsi
+        + ((((p__3 - r2) * k__22 - v__3) * p__2 - 2.0 * v__2 * (p__3 - r2)) * k__21 + v__3 * std::pow(k__22, 2.0) * p__2 - 2.0 * v__2 * (k__22 * v__3 + g)) * tan_phi
+        + (k__22 * v__3 + g + k__21 * (p__3 - r2)) * (v__1 - k__22 * p__1 / 2.0) * sinth) * tanth
+        - costh * (k__22 * v__3 + g + k__21 * (p__3 - r2)) * k__22 * p__1 / 2.0) * sec_theta
+        + ((k__22 * v__3 + g + k__21 * (p__3 - r2)) * tan_phi * p__1 * Omega__1 * cospsi / 2.0
+        - (k__22 * v__3 + g + k__21 * (p__3 - r2)) * tan_phi * Omega__2 * p__1 * sinpsi / 2.0
+        + (p__1 * v__3 + v__1 * (p__3 - r2)) * k__21 + g * p__1 * k__22 + v__1 * (k__22 * v__3 + g)) * std::pow(tanth, 2.0)
+        + (k__22 * v__3 + g + k__21 * (p__3 - r2)) * tan_phi * p__1 * Omega__1 * cospsi / 2.0
+        - (k__22 * v__3 + g + k__21 * (p__3 - r2)) * tan_phi * Omega__2 * p__1 * sinpsi / 2.0
+        + (((-p__3 + r2) * k__22 / 2.0 + v__3) * p__1 + 2.0 * v__1 * (p__3 - r2)) * k__21 + k__22 * (-k__22 * v__3 + g) * p__1 / 2.0 + 2.0 * v__1 * (k__22 * v__3 + g)) * J__2 * (cospsi * Omega__2 + sinpsi * Omega__1) * sec_phi
+        + 3.0 * J__1 * (std::pow(k__22 * v__3 + g + k__21 * (p__3 - r2), 2.0) * std::pow(tan_phi, 2.0) * std::pow(sec_theta, 2.0)
+        + (2.0 * (k__22 * v__3 + g + k__21 * (p__3 - r2)) * tan_phi * p__2 * (1.0 + std::pow(tan_phi, 2.0)) * std::pow(Omega__1, 2.0) * std::pow(cospsi, 2.0)
+        + 4.0 * (1.0 + std::pow(tan_phi, 2.0)) * (-(k__22 * v__3 + g + k__21 * (p__3 - r2)) * tan_phi * p__2 * Omega__2 * sinpsi
+        + (((-p__3 + r2) * k__22 + v__3) * p__2 / 2.0 + v__2 * (p__3 - r2)) * k__21 - v__3 * std::pow(k__22, 2.0) * p__2 / 2.0 + v__2 * (k__22 * v__3 + g)) * Omega__1 * cospsi
+        + 2.0 * (k__22 * v__3 + g + k__21 * (p__3 - r2)) * tan_phi * p__2 * std::pow(Omega__2, 2.0) * (1.0 + std::pow(tan_phi, 2.0)) * std::pow(sinpsi, 2.0)
+        - 4.0 * ((((-p__3 + r2) * k__22 + v__3) * p__2 / 2.0 + v__2 * (p__3 - r2)) * k__21 - v__3 * std::pow(k__22, 2.0) * p__2 / 2.0 + v__2 * (k__22 * v__3 + g)) * Omega__2 * (1.0 + std::pow(tan_phi, 2.0)) * sinpsi
+        + (-p__2 * (p__3 - r2) * std::pow(k__21, 2.0) + (k__22 * ((p__3 - r2) * k__22 - 2.0 * v__3) * p__2 - 4.0 * v__2 * ((p__3 - r2) * k__22 - v__3)) * k__21
+        - 4.0 * v__3 * std::pow(k__22, 2.0) * (-k__22 * p__2 / 4.0 + v__2)) * tan_phi
+        + (p__1 * (p__3 - r2) * std::pow(k__21, 2.0) + (((-p__3 + r2) * std::pow(k__22, 2.0) + 2.0 * k__22 * v__3 + g) * p__1 + 3.0 * ((p__3 - r2) * k__22 - 2.0 / 3.0 * v__3) * v__1) * k__21
+        + k__22 * (-v__3 * std::pow(k__22, 2.0) * p__1 + v__1 * (3.0 * k__22 * v__3 + g))) * sinth) * sec_theta / 3.0
+        + tanth * (std::pow(k__22 * v__3 + g + k__21 * (p__3 - r2), 2.0) * tanth + (-g * p__1 + ((p__3 - r2) * k__22 - 2.0 * v__3) * v__1) * k__21 / 3.0 - v__1 * k__22 * (-k__22 * v__3 + g) / 3.0)) * J__2) / J__1 / J__2;
+
+    const double p12 = sq(p__1) + sq(p__2);
+    const double b3 = (2.0 * (k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g) * J__1 * std::pow(p12, 3.0) * sec_theta
+        * ((p__1 * (std::pow(sec_theta, 2.0) - 2.0) * (Omega__1 - Omega__2) * (Omega__1 + Omega__2) * sec_phi - 2.0 * Omega__1 * Omega__2 * sec_theta * p__2) * tan_phi
+        - 4.0 * tanth * (Omega__1 * std::pow(sec_phi, 2.0) * p__1 + Omega__2 * sec_phi * sec_theta * p__2 / 4.0 - Omega__1 * p__1 / 2.0) * Omega__2) * sec_phi * J__2 * std::pow(cospsi, 2.0)
+        + (J__1 * (-2.0 * (k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g) * (2.0 * (std::pow(sec_theta, 2.0) - 2.0) * Omega__1 * Omega__2 * p__1 * sec_phi + (Omega__1 - Omega__2) * (Omega__1 + Omega__2) * sec_theta * p__2) * p12 * J__2 * sinpsi
+        + tanth * (2.0 * v__3 * Omega__2 * J__2 * p__1 * p12 * std::pow(k__22, 2.0)
+        + (((Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * p__1 - 3.0 * v__1 * Omega__2 * J__2) * std::pow(p__2, 2.0) + 4.0 * v__2 * Omega__2 * J__2 * p__1 * p__2 + (Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * p__1 + v__1 * Omega__2 * J__2) * std::pow(p__1, 2.0)) * v__3
+        + 2.0 * k__21 * Omega__2 * J__2 * p__1 * p12 * (p__3 - r2)) * k__22
+        - 2.0 * k__21 * Omega__2 * J__2 * p__1 * p12 * v__3
+        + ((Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * p__1 - 3.0 * v__1 * Omega__2 * J__2) * std::pow(p__2, 2.0) + 4.0 * v__2 * Omega__2 * J__2 * p__1 * p__2 + (Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * p__1 + v__1 * Omega__2 * J__2) * std::pow(p__1, 2.0)) * (k__21 * p__3 - k__21 * r2 + g))) * tan_phi
+        - 4.0 * (k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g) * J__1 * p12 * tanth * (p__1 * (std::pow(Omega__1, 2.0) - std::pow(Omega__2, 2.0)) * std::pow(sec_phi, 2.0)
+        + Omega__1 * Omega__2 * sec_phi * sec_theta * p__2 + p__1 * (-std::pow(Omega__1, 2.0) / 2.0 + std::pow(Omega__2, 2.0) / 2.0)) * J__2 * sinpsi
+        + J__2 * (2.0 * v__3 * Omega__1 * J__1 * p__1 * p12 * std::pow(k__22, 2.0)
+        + (((Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * p__1 - 3.0 * v__1 * Omega__1 * J__1) * std::pow(p__2, 2.0) + 4.0 * v__2 * Omega__1 * J__1 * p__1 * p__2 + (Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * p__1 + v__1 * Omega__1 * J__1) * std::pow(p__1, 2.0)) * v__3
+        + 2.0 * k__21 * Omega__1 * J__1 * p__1 * p12 * (p__3 - r2)) * k__22
+        - 2.0 * k__21 * Omega__1 * J__1 * p__1 * p12 * v__3
+        + ((Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * p__1 - 3.0 * v__1 * Omega__1 * J__1) * std::pow(p__2, 2.0) + 4.0 * v__2 * Omega__1 * J__1 * p__1 * p__2 + (Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * p__1 + v__1 * Omega__1 * J__1) * std::pow(p__1, 2.0)) * (k__21 * p__3 - k__21 * r2 + g)) * sec_phi
+        + 4.0 * J__1 * sec_theta * (v__3 * Omega__2 * J__2 * p__2 * p12 * std::pow(k__22, 2.0) / 2.0
+        + ((Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * std::pow(p__2, 3.0) / 4.0 + v__2 * Omega__2 * J__2 * std::pow(p__2, 2.0) / 4.0 + (Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * p__1 / 4.0 + v__1 * Omega__2 * J__2) * p__1 * p__2
+        - 3.0 / 4.0 * v__2 * Omega__2 * J__2 * std::pow(p__1, 2.0)) * v__3 + k__21 * Omega__2 * J__2 * p__2 * p12 * (p__3 - r2) / 2.0) * k__22
+        - k__21 * Omega__2 * J__2 * p__2 * p12 * v__3 / 2.0
+        + (k__21 * p__3 - k__21 * r2 + g) * (Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * std::pow(p__2, 3.0) / 4.0 + v__2 * Omega__2 * J__2 * std::pow(p__2, 2.0) / 4.0
+        + (Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * p__1 / 4.0 + v__1 * Omega__2 * J__2) * p__1 * p__2 - 3.0 / 4.0 * v__2 * Omega__2 * J__2 * std::pow(p__1, 2.0)))) * std::pow(p12, 2.0) * sec_theta * sec_phi * cospsi
+        - 3.0 * p12 * sec_theta * (-(p12) * tanth * sec_phi
+        * (2.0 * v__3 * Omega__1 * J__1 * p__1 * p12 * std::pow(k__22, 2.0)
+        + (((Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * p__1 - 3.0 * v__1 * Omega__1 * J__1) * std::pow(p__2, 2.0) + 4.0 * v__2 * Omega__1 * J__1 * p__1 * p__2 + (Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * p__1 + v__1 * Omega__1 * J__1) * std::pow(p__1, 2.0)) * v__3
+        + 2.0 * k__21 * Omega__1 * J__1 * p__1 * p12 * (p__3 - r2)) * k__22
+        - 2.0 * k__21 * Omega__1 * J__1 * p__1 * p12 * v__3
+        + ((Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * p__1 - 3.0 * v__1 * Omega__1 * J__1) * std::pow(p__2, 2.0) + 4.0 * v__2 * Omega__1 * J__1 * p__1 * p__2 + (Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * p__1 + v__1 * Omega__1 * J__1) * std::pow(p__1, 2.0)) * (k__21 * p__3 - k__21 * r2 + g)) * sinpsi / 3.0
+        + J__1 * (2.0 / 3.0 * std::pow(Omega__1, 2.0) * std::pow(sec_phi, 2.0) * p__1 * std::pow(p12, 2.0) * (k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g) * std::pow(tanth, 2.0)
+        + (p__1 - p__2) * (p__1 + p__2) * p12 * std::pow(k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g, 2.0) * tanth
+        + 2.0 / 3.0 * std::pow(Omega__2, 2.0) * p__1 * std::pow(p12, 2.0) * (k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g) * std::pow(sec_phi, 2.0)
+        - 2.0 / 3.0 * Omega__1 * Omega__2 * sec_theta * p__2 * std::pow(p12, 2.0) * (k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g) * sec_phi
+        + v__3 * p__1 * std::pow(p12, 2.0) * std::pow(k__22, 3.0) / 3.0
+        + p12 * ((std::pow(p__1, 2.0) * v__1 + 4.0 * p__1 * p__2 * v__2 - 3.0 * std::pow(p__2, 2.0) * v__1) * v__3 + k__21 * p__1 * p12 * (p__3 - r2)) * std::pow(k__22, 2.0) / 3.0
+        + ((-2.0 / 3.0 * p__1 * std::pow(p12, 2.0) * k__21 - 3.0 * v__1 * v__2 * std::pow(p__2, 3.0) + (-5.0 * std::pow(v__1, 2.0) + 4.0 * std::pow(v__2, 2.0)) * p__1 * std::pow(p__2, 2.0)
+        + 9.0 * v__1 * v__2 * std::pow(p__1, 2.0) * p__2 + std::pow(p__1, 3.0) * (std::pow(v__1, 2.0) - 2.0 * std::pow(v__2, 2.0))) * v__3
+        + k__21 * p12 * (std::pow(p__1, 2.0) * v__1 + 4.0 * p__1 * p__2 * v__2 - 3.0 * std::pow(p__2, 2.0) * v__1) * (p__3 - r2) / 3.0) * k__22
+        - k__21 * p12 * (std::pow(p__1, 2.0) * v__1 + 4.0 * p__1 * p__2 * v__2 - 3.0 * std::pow(p__2, 2.0) * v__1) * v__3 / 3.0
+        + (-p__1 * std::pow(p12, 2.0) * k__21 / 3.0 - 3.0 * v__1 * v__2 * std::pow(p__2, 3.0) + (-5.0 * std::pow(v__1, 2.0) + 4.0 * std::pow(v__2, 2.0)) * p__1 * std::pow(p__2, 2.0)
+        + 9.0 * v__1 * v__2 * std::pow(p__1, 2.0) * p__2 + std::pow(p__1, 3.0) * (std::pow(v__1, 2.0) - 2.0 * std::pow(v__2, 2.0))) * k__21 * p__3
+        - (-p__1 * std::pow(p12, 2.0) * k__21 / 3.0 - 3.0 * v__1 * v__2 * std::pow(p__2, 3.0) + (-5.0 * std::pow(v__1, 2.0) + 4.0 * std::pow(v__2, 2.0)) * p__1 * std::pow(p__2, 2.0)
+        + 9.0 * v__1 * v__2 * std::pow(p__1, 2.0) * p__2 + std::pow(p__1, 3.0) * (std::pow(v__1, 2.0) - 2.0 * std::pow(v__2, 2.0))) * k__21 * r2
+        + g * (-3.0 * v__1 * v__2 * std::pow(p__2, 3.0) + (-5.0 * std::pow(v__1, 2.0) + 4.0 * std::pow(v__2, 2.0)) * p__1 * std::pow(p__2, 2.0)
+        + 9.0 * v__1 * v__2 * std::pow(p__1, 2.0) * p__2 + std::pow(p__1, 3.0) * (std::pow(v__1, 2.0) - 2.0 * std::pow(v__2, 2.0)))) * J__2 * tan_phi
+        - 2.0 * std::pow(Omega__1, 2.0) * std::pow(sec_phi, 2.0) * std::pow(sec_theta, 2.0) * tanth * J__1 * J__2 * p__2 * std::pow(p12, 3.0) * (k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g) * std::pow(sinpsi, 2.0)
+        + 4.0 * std::pow(p12, 2.0) * sec_theta * sec_phi * (-J__1 * (2.0 * v__3 * Omega__2 * J__2 * p__1 * p12 * std::pow(k__22, 2.0)
+        + (((Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * p__1 - 3.0 * v__1 * Omega__2 * J__2) * std::pow(p__2, 2.0) + 4.0 * v__2 * Omega__2 * J__2 * p__1 * p__2 + (Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * p__1 + v__1 * Omega__2 * J__2) * std::pow(p__1, 2.0)) * v__3
+        + 2.0 * k__21 * Omega__2 * J__2 * p__1 * p12 * (p__3 - r2)) * k__22
+        - 2.0 * k__21 * Omega__2 * J__2 * p__1 * p12 * v__3
+        + ((Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * p__1 - 3.0 * v__1 * Omega__2 * J__2) * std::pow(p__2, 2.0) + 4.0 * v__2 * Omega__2 * J__2 * p__1 * p__2 + (Omega__1 * Omega__3 * (J__1 - J__2 - J__3) * p__1 + v__1 * Omega__2 * J__2) * std::pow(p__1, 2.0)) * (k__21 * p__3 - k__21 * r2 + g)) * sec_phi / 4.0
+        + sec_theta * J__2 * (v__3 * Omega__1 * J__1 * p__2 * p12 * std::pow(k__22, 2.0) / 2.0
+        + ((Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * std::pow(p__2, 3.0) / 4.0 + v__2 * Omega__1 * J__1 * std::pow(p__2, 2.0) / 4.0 + (Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * p__1 / 4.0 + v__1 * Omega__1 * J__1) * p__1 * p__2
+        - 3.0 / 4.0 * v__2 * Omega__1 * J__1 * std::pow(p__1, 2.0)) * v__3 + k__21 * Omega__1 * J__1 * p__2 * p12 * (p__3 - r2) / 2.0) * k__22
+        - k__21 * Omega__1 * J__1 * p__2 * p12 * v__3 / 2.0
+        + (Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * std::pow(p__2, 3.0) / 4.0 + v__2 * Omega__1 * J__1 * std::pow(p__2, 2.0) / 4.0 + (Omega__2 * Omega__3 * (J__1 - J__2 + J__3) * p__1 / 4.0 + v__1 * Omega__1 * J__1) * p__1 * p__2
+        - 3.0 / 4.0 * v__2 * Omega__1 * J__1 * std::pow(p__1, 2.0)) * (k__21 * p__3 - k__21 * r2 + g))) * sinpsi
+        + 3.0 * J__1 * (-4.0 * p12 * (-Omega__1 * Omega__2 * sec_theta * p__1 * std::pow(p12, 2.0) * (k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g) * std::pow(sec_phi, 3.0) / 3.0
+        + Omega__1 * Omega__2 * sec_theta * p__1 * std::pow(p12, 2.0) * (k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g) * sec_phi / 6.0
+        + v__3 * p__2 * std::pow(p12, 2.0) * std::pow(k__22, 3.0) / 12.0
+        + ((-3.0 * v__2 * std::pow(p__1, 2.0) + 4.0 * v__1 * p__1 * p__2 + v__2 * std::pow(p__2, 2.0)) * v__3 + k__21 * p__2 * p12 * (p__3 - r2)) * p12 * std::pow(k__22, 2.0) / 12.0
+        + ((-p__2 * std::pow(p12, 2.0) * k__21 / 6.0 + (-std::pow(v__1, 2.0) / 2.0 + std::pow(v__2, 2.0) / 4.0) * std::pow(p__2, 3.0) + 9.0 / 4.0 * std::pow(p__2, 2.0) * v__1 * p__1 * v__2
+        + std::pow(p__1, 2.0) * (std::pow(v__1, 2.0) - 5.0 / 4.0 * std::pow(v__2, 2.0)) * p__2 - 3.0 / 4.0 * v__1 * std::pow(p__1, 3.0) * v__2) * v__3
+        + (p__3 - r2) * p12 * (v__1 * p__1 * p__2 - 3.0 / 4.0 * v__2 * std::pow(p__1, 2.0) + v__2 * std::pow(p__2, 2.0) / 4.0) * k__21 / 3.0) * k__22
+        - p12 * (v__1 * p__1 * p__2 - 3.0 / 4.0 * v__2 * std::pow(p__1, 2.0) + v__2 * std::pow(p__2, 2.0) / 4.0) * k__21 * v__3 / 3.0
+        + (-p__2 * std::pow(p12, 2.0) * k__21 / 12.0 + (-std::pow(v__1, 2.0) / 2.0 + std::pow(v__2, 2.0) / 4.0) * std::pow(p__2, 3.0) + 9.0 / 4.0 * std::pow(p__2, 2.0) * v__1 * p__1 * v__2
+        + std::pow(p__1, 2.0) * (std::pow(v__1, 2.0) - 5.0 / 4.0 * std::pow(v__2, 2.0)) * p__2 - 3.0 / 4.0 * v__1 * std::pow(p__1, 3.0) * v__2) * k__21 * p__3
+        - (-p__2 * std::pow(p12, 2.0) * k__21 / 12.0 + (-std::pow(v__1, 2.0) / 2.0 + std::pow(v__2, 2.0) / 4.0) * std::pow(p__2, 3.0) + 9.0 / 4.0 * std::pow(p__2, 2.0) * v__1 * p__1 * v__2
+        + std::pow(p__1, 2.0) * (std::pow(v__1, 2.0) - 5.0 / 4.0 * std::pow(v__2, 2.0)) * p__2 - 3.0 / 4.0 * v__1 * std::pow(p__1, 3.0) * v__2) * k__21 * r2
+        + g * ((-std::pow(v__1, 2.0) / 2.0 + std::pow(v__2, 2.0) / 4.0) * std::pow(p__2, 3.0) + 9.0 / 4.0 * std::pow(p__2, 2.0) * v__1 * p__1 * v__2
+        + std::pow(p__1, 2.0) * (std::pow(v__1, 2.0) - 5.0 / 4.0 * std::pow(v__2, 2.0)) * p__2 - 3.0 / 4.0 * v__1 * std::pow(p__1, 3.0) * v__2)) * tanth
+        + std::pow(sec_theta, 2.0) * p__1 * p__2 * std::pow(p12, 2.0) * std::pow(k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g, 2.0) * std::pow(sec_phi, 2.0)
+        - 2.0 * std::pow(sec_theta, 2.0) * p__1 * p__2 * std::pow(p12, 2.0) * std::pow(k__21 * p__3 - k__21 * r2 + k__22 * v__3 + g, 2.0)
+        + std::pow(v__3, 2.0) * p__1 * p__2 * std::pow(p12, 2.0) * std::pow(k__22, 2.0)
+        + 2.0 * v__3 * p__1 * p__2 * std::pow(p12, 2.0) * (k__21 * p__3 - k__21 * r2 + g) * k__22
+        + std::pow(k__21, 2.0) * p__1 * p__2 * std::pow(p12, 2.0) * std::pow(p__3, 2.0)
+        + 2.0 * k__21 * p__1 * p__2 * std::pow(p12, 2.0) * (-k__21 * r2 + g) * p__3
+        + std::pow(k__21, 2.0) * p__1 * p__2 * std::pow(p12, 2.0) * std::pow(r2, 2.0)
+        - 2.0 * g * k__21 * p__1 * p__2 * std::pow(p12, 2.0) * r2
+        + std::pow(g, 2.0) * p__1 * std::pow(p__2, 5.0)
+        + (3.0 * std::pow(v__1, 3.0) * v__2 - 2.0 * v__1 * std::pow(v__2, 3.0)) * std::pow(p__2, 4.0)
+        + 2.0 * (std::pow(g, 2.0) * std::pow(p__1, 2.0) + 3.0 / 2.0 * std::pow(v__1, 4.0) - 15.0 / 2.0 * std::pow(v__2, 2.0) * std::pow(v__1, 2.0) + std::pow(v__2, 4.0)) * p__1 * std::pow(p__2, 3.0)
+        + (-15.0 * std::pow(v__1, 3.0) * v__2 + 15.0 * v__1 * std::pow(v__2, 3.0)) * std::pow(p__2, 2.0) * std::pow(p__1, 2.0)
+        + std::pow(p__1, 3.0) * (std::pow(g, 2.0) * std::pow(p__1, 2.0) - 2.0 * std::pow(v__1, 4.0) + 15.0 * std::pow(v__2, 2.0) * std::pow(v__1, 2.0) - 3.0 * std::pow(v__2, 4.0)) * p__2
+        + (2.0 * std::pow(v__1, 3.0) * v__2 - 3.0 * v__1 * std::pow(v__2, 3.0)) * std::pow(p__1, 4.0)) * J__2))
+        * std::pow(p12, -3.5) / J__1 / J__2;
+
+    const double b4 = (1.0 / (J__1 * J__2 * J__3)) * (-(2.0 * J__1 * J__2 * J__3 * p__1 * p__2 * std::pow(v__1, 2.0) / std::pow(sq(p__1) + sq(p__2), 2.0))
+        + (2.0 * J__1 * J__2 * J__3 * v__1 * v__2 / std::pow(sq(p__1) + sq(p__2), 2.0) * (std::pow(p__1, 2.0) - std::pow(p__2, 2.0)))
+        + (2.0 * J__1 * J__2 * J__3 * p__1 * p__2 * std::pow(v__2, 2.0) / std::pow(sq(p__1) + sq(p__2), 2.0))
+        + 2.0 * J__1 * J__2 * J__3 * (cospsi * Omega__2 + sinpsi * Omega__1) * (cospsi * Omega__1 - sinpsi * Omega__2) * std::pow(tan_phi, 2.0)
+        + J__3 * Omega__3 * (J__1 * Omega__1 * (-J__1 + J__2 + J__3) * cospsi + J__2 * Omega__2 * (-J__1 + J__2 - J__3) * sinpsi) * tan_phi
+        + J__2 * J__1 * (Omega__1 * Omega__2 * std::pow(cospsi, 2.0) * J__3 + sinpsi * J__3 * (Omega__1 - Omega__2) * (Omega__1 + Omega__2) * cospsi - Omega__1 * Omega__2 * std::pow(sinpsi, 2.0) * J__3 + J__1 * Omega__1 * Omega__2 - J__2 * Omega__1 * Omega__2));
+
+    // Atilde matrix
+    const double tmp = dh_2.dot(R.col(2));
+    Eigen::Matrix3d Atilde;
+    const Eigen::Vector3d R1 = R.col(0);
+    const Eigen::Vector3d R2 = R.col(1);
+    const Eigen::Vector3d R3 = R.col(2);
+
+    const double Atilde11 = u__t * (cross_dh12.dot(R1)) / (m * J__1 * tmp);
+    const double Atilde12 = u__t * (cross_dh12.dot(R2)) / (m * J__2 * tmp);
+    const double Atilde21 = u__t * ((dh_2.cross(R1)).dot(rho)) / (m * J__1 * tmp);
+    const double Atilde22 = u__t * ((dh_2.cross(R2)).dot(rho)) / (m * J__2 * tmp);
+    const double Atilde31 = sinpsi * tan_phi / J__1;
+    const double Atilde32 = cospsi * tan_phi / J__2;
+    const double Atilde33 = 1.0 / J__3;
+
+    Atilde << Atilde11, Atilde12, 0.0,
+              Atilde21, Atilde22, 0.0,
+              Atilde31, Atilde32, Atilde33;
+
+    // tau = Atilde \ ([nu__1;nu__3;nu__4] - [b1;b3;b4])
+    const Eigen::Vector3d rhs(nu__1 - b1, nu__3 - b3, nu__4 - b4);
+    const Eigen::Vector3d tau_frd = Atilde.fullPivLu().solve(rhs);
+
+    // ControllerNode publishes torque after converting FLU->FRD.
+    // Since the quasi math is now using FRD body axes, convert back FRD->FLU here
+    // so the rest of the pipeline stays consistent.
+    const Eigen::Vector3d tau(tau_frd.x(), -tau_frd.y(), -tau_frd.z());
+
+    double thrust = u__t;
+
+    *controller_torque_thrust << tau, thrust;
+
+    std::ofstream file("controller_dataQuasi.txt", std::ios::app);
+    if (file.is_open()) {
+        file << std::fixed << std::setprecision(6);
+        file << p__1 << "," << p__2 << "," << p__3 << ","
+             << v__1 << "," << v__2 << "," << v__3 << ","
+             << theta << "," << phi << "," << psi << ","
+             << thrust << "," << tau.transpose() << "\n";
+        file.close();
+    }
 }
