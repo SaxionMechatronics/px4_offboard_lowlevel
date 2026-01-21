@@ -62,7 +62,7 @@ private:
     //pose_stamped.pose.position.y = 0;//0
     pose_stamped.pose.position.x = 5.0;
     pose_stamped.pose.position.y = 0;
-    pose_stamped.pose.position.z = 5.0;
+    pose_stamped.pose.position.z = 3.0;
     pose_stamped.pose.orientation.w = 1.0;
 
     publisher_->publish(pose_stamped);

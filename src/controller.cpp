@@ -459,19 +459,6 @@ void controller::calculateQuasiControllerOutput(Eigen::VectorXd *controller_torq
     const Eigen::Vector3d eta_dt = W * OM;
     (void)eta_dt;
 
-    // MATLAB W_dt (copied from your script)
-    Eigen::Matrix3d W_dt;
-    W_dt <<
-        sec_phi * (tan_phi * sq(std::cos(psi)) * Omega__2 + (std::sin(psi) * (Omega__2 * sec_phi + Omega__1) * tan_phi + Omega__3) * std::cos(psi) + sec_phi * sq(std::sin(psi)) * tan_phi * Omega__1),
-        sec_phi * (-sq(std::sin(psi)) * tan_phi * Omega__1 + (std::cos(psi) * (Omega__1 * sec_phi - Omega__2) * tan_phi - Omega__3) * std::sin(psi) + sq(std::cos(psi)) * Omega__2 * sec_phi * tan_phi),
-        0.0,
-        -std::sin(psi) * (Omega__3 + tan_phi * (Omega__1 * std::sin(psi) + Omega__2 * std::cos(psi))),
-        -std::cos(psi) * (Omega__3 + tan_phi * (Omega__1 * std::sin(psi) + Omega__2 * std::cos(psi))),
-        0.0,
-        sq(tan_phi) * sq(std::cos(psi)) * Omega__2 + ((Omega__2 * std::pow(sec_phi, 3) + sq(tan_phi) * Omega__1) * std::sin(psi) + Omega__3 * tan_phi) * std::cos(psi) + sq(std::sin(psi)) * Omega__1 * std::pow(sec_phi, 3) - sq(std::sin(psi)) * sq(tan_phi) * Omega__1 + ((Omega__1 * std::pow(sec_phi, 3) - Omega__2 * sq(tan_phi)) * std::cos(psi) - Omega__3 * tan_phi) * std::sin(psi) + sq(std::cos(psi)) * Omega__2 * std::pow(sec_phi, 3),
-        0.0,
-        0.0;
-    (void)W_dt;
 
     // ======================
     // The output h
@@ -686,19 +673,18 @@ void controller::calculateQuasiControllerOutput(Eigen::VectorXd *controller_torq
     // ControllerNode publishes torque after converting FLU->FRD.
     // Since the quasi math is now using FRD body axes, convert back FRD->FLU here
     // so the rest of the pipeline stays consistent.
-    const Eigen::Vector3d tau(tau_frd.x(), -tau_frd.y(), -tau_frd.z());
+    //const Eigen::Vector3d tau(tau_frd.x(), -tau_frd.y(), -tau_frd.z());
 
     double thrust = u__t;
 
-    *controller_torque_thrust << tau, thrust;
-
+    *controller_torque_thrust << tau_frd, thrust;
     std::ofstream file("controller_dataQuasi.txt", std::ios::app);
     if (file.is_open()) {
         file << std::fixed << std::setprecision(6);
         file << p__1 << "," << p__2 << "," << p__3 << ","
              << v__1 << "," << v__2 << "," << v__3 << ","
              << theta << "," << phi << "," << psi << ","
-             << thrust << "," << tau.transpose() << "\n";
+             << thrust << "," << tau_frd.transpose() << "\n";
         file.close();
     }
 }

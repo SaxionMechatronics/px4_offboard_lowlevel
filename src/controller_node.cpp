@@ -550,7 +550,7 @@ void ControllerNode::updateControllerOutput() {
             // Normalize the controller output
             if (in_sitl_mode_) px4InverseSITL(&normalized_torque_thrust, &throttles, &controller_output_Quasi);
             else px4Inverse(&normalized_torque_thrust, &throttles, &controller_output_Quasi);
-            publishActuatorMotorsMsg(normalized_torque_thrust);
+            publishThrustTorqueMsg(normalized_torque_thrust);
             break;
         default:
             controller_.calculateControllerOutput(&controller_output, &desired_quaternion);

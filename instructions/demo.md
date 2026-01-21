@@ -19,7 +19,7 @@ ros2 run plotjuggler plotjuggler
 ## 3. Launch the controller
 ```bash
 # Source the workspace
-source /llc_ws/install/setup.sh
+source llc_ws/install/setup.sh
 
 # Start the simulation
 ros2 launch px4_offboard_lowlevel iris_sitl.launch.py
