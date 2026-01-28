@@ -58,14 +58,16 @@ private:
     pose_stamped.header.stamp = this->now();
     pose_stamped.header.frame_id = "base_link"; // Change this to your desired frame ID
 
-    pose_stamped.pose.position.x = radius * cos(angle);
-    pose_stamped.pose.position.y = radius * sin(angle);
-    pose_stamped.pose.position.z = 2.0;
+    //pose_stamped.pose.position.x = 2;//2
+    //pose_stamped.pose.position.y = 0;//0
+    pose_stamped.pose.position.x = 5.0;
+    pose_stamped.pose.position.y = 0;
+    pose_stamped.pose.position.z = 3.0;
     pose_stamped.pose.orientation.w = 1.0;
 
     publisher_->publish(pose_stamped);
 
-    angle += 0.01; // Change this value to control the angular speed of the circular path
+    angle += 0.005; // Change this value to control the angular speed of the circular path
   }
 
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_;

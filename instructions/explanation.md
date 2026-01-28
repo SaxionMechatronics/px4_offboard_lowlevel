@@ -45,3 +45,63 @@ setTrajectoryPoint(const Eigen::Vector3d &position_W, const Eigen::Quaterniond &
 ## Working with another vehicles
 
 Check the parameters that needs to be defined for each vehicle in `./config/uav_parameters/iris_param.yaml`. By creating another parameters yaml file and another launch file based on `./launch/iris_sitl.launch.py`, you should be able to fly another vehicle with the package.
+
+
+## Explanation of Feedback Linearization Controller Code
+A  detailed breakdown of the calculateFBLControllerOutput() function and its components, used in the Feedback Linearization (FBL) controller.
+
+# 1. State Initialization
+The function starts by initializing the state variables, capturing the drone's position, orientation (roll, pitch, yaw), and velocity (both linear and angular). The orientation is calculated from the quaternion R_B_W_.
+```CPP
+// Initialize variables with current states
+   // Position (x, y, z)
+   double x = position_W_(0);
+   double y = position_W_(1);
+   double z = position_W_(2);
+
+   // Orientation (roll, pitch, yaw)
+   double ps = std::atan2(R_B_W_(1,0), R_B_W_(0,0));
+
+    // Pitch (θ, theta) - Rotation around Y-axis
+    double th= std::asin(-R_B_W_(2,0));
+
+    // Roll (ϕ, phi) - Rotation around X-axis
+    double ph= std::atan2(R_B_W_(2,1), R_B_W_(2,2));
+
+   // Linear velocities (vx, vy, vz)
+   double vx = velocity_W_(0);
+   double vy = velocity_W_(1);
+   double vz = velocity_W_(2);
+
+   // Angular velocities (p, q, r)
+   double p = angular_velocity_B_(0);
+   double q = angular_velocity_B_(1);
+   double r = angular_velocity_B_(2);
+```
+
+
+# 2. Control Gains
+The control gains (e.g., k1, k2) are preset values from MATLAB simulations and are critical in shaping the drone's response to deviations from its target state.
+```cpp
+ // Control gains
+    double k1 = 200.0;
+    double k2 = 400.0;
+```
+
+
+# 3. Desired Trajectory
+Parameters like des_radius, des_height, and des_yaw define a circular trajectory for the drone, providing a reference path.
+```cpp
+   double des_radius = 5.0;
+   double des_height = 5.0;
+   double des_yaw = 0.0;
+```
+
+# 4. FBL State Calculations
+Variables named Lg1Lf3S1, Lg2Lf3S1, etc., are derivatives and control input components based on the FBL principles. These help in linearizing the system dynamics.
+
+# 5. Torque and Thrust Calculation
+The main control output, tau, consists of three torques, and thrust is a scalar force to achieve stability along the path.
+
+# 6. Logging for Analysis
+The function logs the controller's states for post-simulation analysis.

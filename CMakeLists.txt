@@ -1,14 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(px4_offboard_lowlevel)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
-
-# find dependencies
-# Find ROS 2 dependencies
+# Ensure Python is found
 find_package(ament_cmake REQUIRED)
-find_package(rclpy REQUIRED)
+find_package(rclpy REQUIRED)  # <-- Add this for Python node support
 find_package(Eigen3 REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -16,12 +11,20 @@ find_package(std_msgs REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 
-# Specify additional locations of header files
+
+
+# Compile options
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# Include directories for C++
 include_directories(
   include
-  ${EIGEN3_INCLUDE_DIR}  # Use EIGEN3_INCLUDE_DIR instead of EIGEN3_DIR
+  ${EIGEN3_INCLUDE_DIR}
 )
 
+# Add executables (C++ nodes)
 add_executable(offboard_controller_node 
   src/controller.cpp
   src/controller_node.cpp
@@ -31,7 +34,7 @@ add_executable(circle_trajectory_node
   src/TrajectoryPublishers/circle_trajectory_node.cpp
 )
 
-# Add dependencies for the executables
+# Add dependencies for the C++ executables
 ament_target_dependencies(offboard_controller_node
   rclcpp
   std_msgs
@@ -46,38 +49,43 @@ ament_target_dependencies(circle_trajectory_node
   geometry_msgs
 )
 
+# Install the C++ executables
 install(TARGETS offboard_controller_node
   DESTINATION lib/${PROJECT_NAME})
 
 install(TARGETS circle_trajectory_node
   DESTINATION lib/${PROJECT_NAME})
 
+# Install Python scripts (including your visualizer.py)
 install(PROGRAMS
-  scripts/identification.py
+  scripts/identification.py  # Existing Python script
+  scripts/visualizer.py      # <-- Add visualizer.py here for installation
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Install directories
+# Install launch files
 install(DIRECTORY
   launch
   DESTINATION share/${PROJECT_NAME}
 )
+install(DIRECTORY 
+  resource
+  DESTINATION share/${PROJECT_NAME})
 
+
+# Install config files
 install(DIRECTORY
   config
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Optionally add testing (unchanged)
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # comment the line when a copyright and license is added to all source files
   set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # comment the line when this package is in a git repo and when
-  # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 
 ament_package()
+
