@@ -21,6 +21,16 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(trajectory_msgs REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/Trigger.msg"
+  "msg/Actions.msg"
+  "msg/Observations.msg"
+  DEPENDENCIES std_msgs
+ )
+
+ament_export_dependencies(rosidl_default_runtime)
 
 # Specify additional locations of header files
 include_directories(
@@ -55,11 +65,16 @@ ament_target_dependencies(circle_trajectory_node
   geometry_msgs
 )
 
+rosidl_get_typesupport_target(cpp_typesupport_target
+  ${PROJECT_NAME} "rosidl_typesupport_cpp")
+
 install(FILES
   ${ONNXRUNTIME_ROOT}/lib/libonnxruntime.so
   DESTINATION lib
 )
 
+target_link_libraries(offboard_controller_node "${cpp_typesupport_target}")
+target_link_libraries(circle_trajectory_node  "${cpp_typesupport_target}")
 
 install(TARGETS offboard_controller_node
   DESTINATION lib/${PROJECT_NAME})

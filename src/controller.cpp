@@ -121,17 +121,20 @@ float* controller::forwardPolicy(std::vector<float> input_data) {
     return output_tensors.front().GetTensorMutableData<float>();
 }
 
-void controller::calculateControllerOutput(Eigen::VectorXd *controller_rates_thrust) {
+void controller::calculateControllerOutput(Eigen::VectorXd *controller_rates_thrust, std::vector<float> &obs, std::vector<float> &act) {
     assert(controller_rates_thrust);
 
     // Get policy output
-    float* output_data = forwardPolicy(getObs());
+    obs = getObs();     // Store obs for publishing on the debug topic
+    float* output_data = forwardPolicy(obs);
     std::cout << "Act: " << output_data[0] << '\t'  << output_data[1] << '\t'  << output_data[2] << std::endl;
 
     // Clamp output
     output_data[0] = std::clamp(output_data[0], -1.0f, 1.0f);
     output_data[1] = std::clamp(output_data[1], -1.0f, 1.0f);
     output_data[2] = std::clamp(output_data[2], -1.0f, 1.0f);
+
+    act = { output_data[0], output_data[1], output_data[2] };   // Store actions for publishing on the debug topic
 
     // Proportional yaw control
     const float yaw = atan2(R_B_W_(1,0), R_B_W_(0,0));

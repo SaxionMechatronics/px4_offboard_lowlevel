@@ -53,7 +53,7 @@ ControllerNode::ControllerNode()
             (status_topic_, qos, std::bind(&ControllerNode::vehicleStatusCallback, this, _1));
         command_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>
             (command_pose_topic_, 10, std::bind(&ControllerNode::commandPoseCallback, this, _1));
-        trigger_sub_ = this->create_subscription<std_msgs::msg::Float32>
+        trigger_sub_ = this->create_subscription<px4_offboard_lowlevel::msg::Trigger>
             (trigger_topic_, 10, std::bind(&ControllerNode::triggerCallback, this, _1));
 
         // Publishers
@@ -71,6 +71,10 @@ ControllerNode::ControllerNode()
             (torque_setpoint_topic_, 10);
         rates_setpoint_publisher_ = this->create_publisher<px4_msgs::msg::VehicleRatesSetpoint>
             (rates_setpoint_topic_, 10);
+        actions_debug_publisher_ = this->create_publisher<px4_offboard_lowlevel::msg::Actions>
+            ("/nn/actions", 10);
+        observations_debug_publisher_ = this->create_publisher<px4_offboard_lowlevel::msg::Observations>
+            ("/nn/observations", 10);
         
         // Parameters subscriber
         callback_handle_ = this->add_on_set_parameters_callback(
@@ -454,8 +458,8 @@ void ControllerNode::vehicle_odometryCallback(const px4_msgs::msg::VehicleOdomet
         controller_.setOdometry(position, orientation, velocity, angular_velocity);
 }
 
-void ControllerNode::triggerCallback(const std_msgs::msg::Float32::SharedPtr trigger_msg){
-    controller_.setTrigger(trigger_msg->data);
+void ControllerNode::triggerCallback(const px4_offboard_lowlevel::msg::Trigger::SharedPtr trigger_msg){
+    controller_.setTrigger(trigger_msg->signal);
 }
 
 void ControllerNode::vehicleStatusCallback(const px4_msgs::msg::VehicleStatus::SharedPtr status_msg){
@@ -562,7 +566,17 @@ void ControllerNode::updateControllerOutput() {
     //  calculate controller output
     Eigen::VectorXd controller_output;
     Eigen::Quaterniond desired_quaternion;
-    controller_.calculateControllerOutput(&controller_output);
+
+    px4_offboard_lowlevel::msg::Observations obs_debug_msg;
+    px4_offboard_lowlevel::msg::Actions act_debug_msg;
+
+    controller_.calculateControllerOutput(&controller_output, obs_debug_msg.observations, act_debug_msg.actions);
+
+    const rclcpp::Time now = this->get_clock()->now();
+    obs_debug_msg.header.stamp = now;
+    act_debug_msg.header.stamp = now;
+    observations_debug_publisher_->publish(obs_debug_msg);
+    actions_debug_publisher_->publish(act_debug_msg);
     
     // Normalize the controller output
     Eigen::VectorXd controller_output_wrench = Eigen::VectorXd::Zero(4);

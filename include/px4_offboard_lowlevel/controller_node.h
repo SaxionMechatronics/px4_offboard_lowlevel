@@ -52,7 +52,9 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <trajectory_msgs/msg/multi_dof_joint_trajectory_point.hpp>
-#include <std_msgs/msg/float32.hpp>
+#include <px4_offboard_lowlevel/msg/trigger.hpp>
+#include <px4_offboard_lowlevel/msg/actions.hpp>
+#include <px4_offboard_lowlevel/msg/observations.hpp>
 
 #include <string>
 
@@ -83,7 +85,7 @@ private:
     rclcpp::Subscription<px4_msgs::msg::VehicleOdometry>::SharedPtr vehicle_odometry_sub_;
     rclcpp::Subscription<rcl_interfaces::msg::ParameterEvent>::SharedPtr parameter_event_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr command_pose_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr trigger_sub_;
+    rclcpp::Subscription<px4_offboard_lowlevel::msg::Trigger>::SharedPtr trigger_sub_;
     
     // Publishers
     rclcpp::Publisher<px4_msgs::msg::ActuatorMotors>::SharedPtr actuator_motors_publisher_;
@@ -93,6 +95,8 @@ private:
     rclcpp::Publisher<px4_msgs::msg::VehicleRatesSetpoint>::SharedPtr rates_setpoint_publisher_;
     rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
 	rclcpp::Publisher<px4_msgs::msg::VehicleCommand>::SharedPtr vehicle_command_publisher_;
+    rclcpp::Publisher<px4_offboard_lowlevel::msg::Actions>::SharedPtr actions_debug_publisher_;
+    rclcpp::Publisher<px4_offboard_lowlevel::msg::Observations>::SharedPtr observations_debug_publisher_;
 
     // Services
     rcl_interfaces::msg::SetParametersResult parametersCallback(const std::vector<rclcpp::Parameter> &parameters);
@@ -155,7 +159,7 @@ private:
     void commandTrajectoryCallback(const trajectory_msgs::msg::MultiDOFJointTrajectoryPoint::SharedPtr& traj_msg);
     void vehicle_odometryCallback(const px4_msgs::msg::VehicleOdometry::SharedPtr odom_msg);
     void vehicleStatusCallback(const px4_msgs::msg::VehicleStatus::SharedPtr status_msg);
-    void triggerCallback(const std_msgs::msg::Float32::SharedPtr trigger_msg);
+    void triggerCallback(const px4_offboard_lowlevel::msg::Trigger::SharedPtr trigger_msg);
 
     void publishActuatorMotorsMsg(const Eigen::VectorXd& throttles);
     void publishThrustTorqueMsg(const Eigen::Vector4d& controller_output);

@@ -42,7 +42,7 @@
 class controller {
 public:
     controller();
-    void calculateControllerOutput(Eigen::VectorXd *controller_rates_thrust);
+    void calculateControllerOutput(Eigen::VectorXd *controller_rates_thrust, std::vector<float> &obs, std::vector<float> &act);
     void loadPolicy(const std::string policyFile);
     float* forwardPolicy(std::vector<float> input_data);
 
