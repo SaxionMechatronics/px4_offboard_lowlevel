@@ -12,6 +12,9 @@
 
     # clone
     git clone https://github.com/PX4/PX4-Autopilot.git --recursive
+    git checkout v1.16.0
+    make submodulesclean
+
 ```
 
    <!-- - If working with older version of PX4-Autopilot, change the head of this clone
@@ -149,3 +152,5 @@ QGroundControl is essential software for managing and controlling unmanned aeria
     # run the image
     ./QGroundControl.AppImage
 ```
+
+3. Activate the virtual joystick. From Application Settings -> Fly View -> Virtual Joystick -> Enable.

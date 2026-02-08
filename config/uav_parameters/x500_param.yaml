@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     uav_parameters:
-      mass: 2.0                  # Kg
+      mass: 2.064                  # Kg (base + rotors)
       arm_length: 0.25             # m
       num_of_arms: 4
       inertia:                     # Kg.m^2
@@ -18,5 +18,5 @@
         x_0: 914.2
       PWM_MIN: 1075
       PWM_MAX: 1950
-      input_scaling: 1000
-      zero_position_armed: 10
+      SIM_GZ_EC_MAX: 1000        # rad/s, corresponds to SIM_GZ_EC_MAX from PX4 parameters
+      SIM_GZ_EC_MIN: 150         # rad/s, corresponds to SIM_GZ_EC_MIN from PX4 parameters

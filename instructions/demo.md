@@ -1,12 +1,12 @@
 # Simulation Demo
-This file provides the steps needed to run the demo. The steps shown in ``instructions/setup.md`` must be completed first.
+This file provides the steps needed to run the demo. The steps shown in [package_setup.md](./package_setup.md) must be completed first.
 
 > **WARNING:** This demo is not safe for use on real hardware, the circle trajector generator may cause agressive and unpredictable behavior upon takeoff.
 
 ## 1. Start the simulation
 Navigate to your PX4-Autopilot folder ande execute:
 ```bash
-make px4_sitl gazebo-classic_iris
+make px4_sitl gz_x500
 ```
 
 ## 2. Run the MicroXRCEAgent
@@ -20,7 +20,7 @@ MicroXRCEAgent udp4 -p 8888
 source ~/llc_ws/install/setup.sh
 
 # Start the simulation
-ros2 launch px4_offboard_lowlevel iris_sitl.launch.py
+ros2 launch px4_offboard_lowlevel x500_sitl.launch.py
 ```
 
 ## 4. Start flying
@@ -34,6 +34,8 @@ ros2 run px4_offboard_lowlevel circle_trajectory_node
 ```
 
 2. Open QGroundControl, change to offboard mode, and arm the drone.
+    - If `Offboard` mode is not visible then: Click the current flight mode button -> Click the expand arrow to open the flight modes dialog
+    - Enable "Edit Displayed Flight Modes" toggle -> Enable "Offboard" mode toggle
 
 ## Change the control mode
 By default the controller will be sending [Attitude Setpoints](https://docs.px4.io/main/en/msg_docs/VehicleAttitudeSetpoint.html):

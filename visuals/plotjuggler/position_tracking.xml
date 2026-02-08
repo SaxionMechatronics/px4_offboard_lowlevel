@@ -1,16 +1,16 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <root>
- <tabbed_widget parent="main_window" name="Main Window">
+ <tabbed_widget name="Main Window" parent="main_window">
   <Tab tab_name="commands" containers="1">
    <Container>
     <DockSplitter orientation="-" count="1" sizes="1">
      <DockArea name="...">
-      <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
-       <range right="21.250201" left="0.000000" bottom="-2.099999" top="2.100000"/>
+      <plot flip_x="false" mode="TimeSeries" flip_y="false" style="Lines">
+       <range left="5.299982" bottom="-2.099998" right="10.290207" top="2.100000"/>
        <limitY/>
-       <curve color="#1f77b4" name="/command/pose/pose/position/x"/>
-       <curve color="#d62728" name="/command/pose/pose/position/y"/>
-       <curve color="#1ac938" name="/command/pose/pose/position/z"/>
+       <curve name="/command/pose/pose/position/x" color="#1f77b4"/>
+       <curve name="/command/pose/pose/position/y" color="#d62728"/>
+       <curve name="/command/pose/pose/position/z" color="#1ac938"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -18,21 +18,21 @@
   </Tab>
   <Tab tab_name="tracking_xy" containers="1">
    <Container>
-    <DockSplitter orientation="-" count="2" sizes="0.501203;0.498797">
+    <DockSplitter orientation="-" count="2" sizes="0.50059;0.49941">
      <DockArea name="...">
-      <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
-       <range right="177.377117" left="0.000000" bottom="-2.099999" top="2.099999"/>
+      <plot flip_x="false" mode="TimeSeries" flip_y="false" style="Lines">
+       <range left="5.288109" bottom="-1.955231" right="10.290207" top="2.096469"/>
        <limitY/>
-       <curve color="#b41f3f" name="/command/pose/pose/position/x"/>
-       <curve color="#0e2dff" name="position_x"/>
+       <curve name="/command/pose/pose/position/x" color="#b41f3f"/>
+       <curve name="x" color="#2827d6"/>
       </plot>
      </DockArea>
      <DockArea name="...">
-      <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
-       <range right="177.377117" left="0.000000" bottom="-2.143400" top="2.101059"/>
+      <plot flip_x="false" mode="TimeSeries" flip_y="false" style="Lines">
+       <range left="5.288109" bottom="-2.099998" right="10.290207" top="2.100000"/>
        <limitY/>
-       <curve color="#d62728" name="/command/pose/pose/position/y"/>
-       <curve color="#5b4cf1" name="position_y"/>
+       <curve name="/command/pose/pose/position/y" color="#d62728"/>
+       <curve name="y" color="#1a33c9"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -42,60 +42,24 @@
    <Container>
     <DockSplitter orientation="-" count="1" sizes="1">
      <DockArea name="...">
-      <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
-       <range right="177.377117" left="0.000000" bottom="1.989174" top="2.443880"/>
+      <plot flip_x="false" mode="TimeSeries" flip_y="false" style="Lines">
+       <range left="5.288109" bottom="1.998839" right="10.290207" top="2.047608"/>
        <limitY/>
-       <curve color="#1ac938" name="/command/pose/pose/position/z"/>
-       <curve color="#9467bd" name="position_z"/>
+       <curve name="/command/pose/pose/position/z" color="#1ac938"/>
+       <curve name="z" color="#1f77b4"/>
       </plot>
      </DockArea>
     </DockSplitter>
    </Container>
   </Tab>
-  <Tab tab_name="motor_cmds" containers="1">
-   <Container>
-    <DockSplitter orientation="-" count="1" sizes="1">
-     <DockSplitter orientation="-" count="4" sizes="0.249799;0.250602;0.249799;0.249799">
-      <DockArea name="...">
-       <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
-        <range right="177.383181" left="147.363029" bottom="-0.111840" top="1.161366"/>
-        <limitY/>
-        <curve color="#1f77b4" name="/fmu/in/actuator_motors/control.0"/>
-       </plot>
-      </DockArea>
-      <DockArea name="...">
-       <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
-        <range right="177.383181" left="147.363029" bottom="-0.121427" top="1.144706"/>
-        <limitY/>
-        <curve color="#d62728" name="/fmu/in/actuator_motors/control.1"/>
-       </plot>
-      </DockArea>
-      <DockArea name="...">
-       <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
-        <range right="177.383181" left="147.363029" bottom="-0.122809" top="1.155985"/>
-        <limitY/>
-        <curve color="#1ac938" name="/fmu/in/actuator_motors/control.2"/>
-       </plot>
-      </DockArea>
-      <DockArea name="...">
-       <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
-        <range right="177.383181" left="147.363029" bottom="-0.123525" top="1.143174"/>
-        <limitY/>
-        <curve color="#ff7f0e" name="/fmu/in/actuator_motors/control.3"/>
-       </plot>
-      </DockArea>
-     </DockSplitter>
-    </DockSplitter>
-   </Container>
-  </Tab>
-  <currentTabIndex index="3"/>
+  <currentTabIndex index="1"/>
  </tabbed_widget>
  <use_relative_time_offset enabled="1"/>
  <!-- - - - - - - - - - - - - - - -->
  <!-- - - - - - - - - - - - - - - -->
  <Plugins>
   <plugin ID="DataLoad CSV">
-   <default delimiter="0" time_axis=""/>
+   <parameters time_axis="" delimiter="0"/>
   </plugin>
   <plugin ID="DataLoad MCAP"/>
   <plugin ID="DataLoad ROS2 bags">
@@ -104,6 +68,7 @@
    <max_array_size value="100"/>
    <boolean_strings_to_number value="true"/>
    <remove_suffix_from_strings value="true"/>
+   <selected_topics value=""/>
   </plugin>
   <plugin ID="DataLoad ULog"/>
   <plugin ID="ROS2 Topic Subscriber">
@@ -112,6 +77,7 @@
    <max_array_size value="100"/>
    <boolean_strings_to_number value="true"/>
    <remove_suffix_from_strings value="true"/>
+   <selected_topics value="/command/pose;/fmu/in/actuator_motors;/fmu/out/vehicle_odometry"/>
   </plugin>
   <plugin ID="UDP Server"/>
   <plugin ID="WebSocket Server"/>
@@ -135,6 +101,11 @@
    <function>return -value</function>
    <linked_source>/fmu/out/vehicle_odometry/position.2</linked_source>
   </snippet>
+  <snippet name="x">
+   <global></global>
+   <function>return value</function>
+   <linked_source>/fmu/out/vehicle_odometry/position[1]</linked_source>
+  </snippet>
   <snippet name="position_y">
    <global></global>
    <function>return value</function>
@@ -144,6 +115,16 @@
    <global></global>
    <function>return value</function>
    <linked_source>/fmu/out/vehicle_odometry/position.1</linked_source>
+  </snippet>
+  <snippet name="y">
+   <global></global>
+   <function>return value</function>
+   <linked_source>/fmu/out/vehicle_odometry/position[0]</linked_source>
+  </snippet>
+  <snippet name="z">
+   <global></global>
+   <function>return -value</function>
+   <linked_source>/fmu/out/vehicle_odometry/position[2]</linked_source>
   </snippet>
  </customMathEquations>
  <snippets/>

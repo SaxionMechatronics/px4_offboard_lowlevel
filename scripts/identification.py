@@ -138,8 +138,8 @@ def main(args=None):
     gravity = 9.81
     pwm_min = 1100
     pwm_max = 1900
-    input_scaling = 1000
-    zero_position_armed = 10
+    SIM_GZ_EC_MAX = 1000
+    SIM_GZ_EC_MIN = 10
 
     f.write("""/**:
     ros__parameters:
@@ -161,8 +161,8 @@ def main(args=None):
     f.write("            x_0: " + str(p3) + "\n")
     f.write("          PWM_MIN: " + str(pwm_min) + "\n")
     f.write("          PWM_MAX: " + str(pwm_max) + "\n")
-    f.write("          input_scaling: " + str(input_scaling) + "\n")
-    f.write("          zero_position_armed: " + str(zero_position_armed) + "\n")
+    f.write("          SIM_GZ_EC_MAX: " + str(SIM_GZ_EC_MAX) + "\n")
+    f.write("          SIM_GZ_EC_MIN: " + str(SIM_GZ_EC_MIN) + "\n")
 
     f.close()
 
