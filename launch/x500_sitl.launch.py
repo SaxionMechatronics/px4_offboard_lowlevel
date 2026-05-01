@@ -10,7 +10,7 @@ def generate_launch_description():
    config_1 = os.path.join(
       get_package_share_directory('px4_offboard_lowlevel'),
       'config', 'uav_parameters',
-      'x500_param.yaml'
+      'x500_exp_param.yaml'
       )
    
    config_2 = os.path.join(
