@@ -7,7 +7,6 @@ def generate_launch_description():
                 '/command/trigger',
                 '/command/pose',
                 '/fmu/out/vehicle_odometry',
-                '/fmu/in/vehicle_visual_odometry',
                 '/fmu/out/vehicle_control_mode',
                 '/fmu/out/vehicle_status_v1',
                 '/fmu/out/vehicle_local_position',
