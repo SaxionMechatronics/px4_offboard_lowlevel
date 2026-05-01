@@ -35,6 +35,7 @@
 #include "../include/px4_offboard_lowlevel/controller.h"
 #include <iostream>
 #include <algorithm>
+#include <fstream>
 
 
 controller::controller()
@@ -42,7 +43,8 @@ controller::controller()
       session_options_(),
       session_(nullptr)  // temp placeholder, real initialization in loadPolicy
 {
-    trigger_ = 0.0;
+    pilot_trigger_ = 0.0;
+    iffs_trigger_ = 0.0;
 
     session_options_.SetIntraOpNumThreads(1);
 }
@@ -66,10 +68,35 @@ void controller::loadPolicy(std::string policy_file) {
     output_name_ = output_name_ptr.get();
 }
 
+double controller::computeCbeta()
+{
+    // 1) Position error in world frame: target - current
+    Eigen::Vector3d target_pos_world(3.0, 0.0, 0.0);
+    target_pos_world += r_position_W_;
+    Eigen::Vector3d target_pos_error_W = target_pos_world - position_W_;
+
+
+
+    // 2) World -> Body rotation: R_wb = R_bw^T
+    Eigen::Matrix3d R_W_B = R_B_W_.transpose();
+
+    // 3) Error in body frame
+    Eigen::Vector3d pos_error_B = R_W_B * target_pos_error_W;
+    double norm_b = pos_error_B.norm();
+
+    Eigen::Vector3d pos_error_B_norm = pos_error_B / norm_b;
+
+    // 4) x_B = [1, 0, 0], so cbeta = component along body x
+    double cbeta = pos_error_B_norm.x();  // cos(beta)
+
+    return cbeta;
+}
+
 std::vector<float> controller::getObs() {
     const Eigen::Vector3d e_p = r_position_W_ - position_W_;
+    double cbeta_ = computeCbeta();
     
-    std::vector<float> obs(include_trigger_ ? 19 : 18, 0.0f);
+    std::vector<float> obs(include_trigger_ ? 21 : 19, 0.0f);
     obs[0]  = e_p(0);
     obs[1]  = e_p(1);
     obs[2]  = e_p(2);
@@ -90,7 +117,15 @@ std::vector<float> controller::getObs() {
     obs[17] = angular_velocity_B_(2);
     
     if (include_trigger_) {
-        obs[18] = trigger_;
+        obs[18] = pilot_trigger_;
+        std::cout << "pilot trigger: " << pilot_trigger_ << std::endl;
+        obs[19] = iffs_trigger_;
+        std::cout << "iffs trigger: " << iffs_trigger_ << std::endl;
+        obs[20] = cbeta_;
+
+    }
+    else {
+        obs[18] = cbeta_;
     }
 
     return obs;

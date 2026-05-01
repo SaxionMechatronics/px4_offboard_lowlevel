@@ -75,10 +75,12 @@ public:
         r_yaw_rate = 0.0;
     }
 
-    void setTrigger(const float trigger) {
-        trigger_ = trigger;
+    void setPilotTrigger(const float pilot_trigger) {
+        pilot_trigger_ = pilot_trigger;
     } 
-
+    void setIffsTrigger(const float iffs_trigger) {
+        iffs_trigger_ = iffs_trigger;
+    } 
     void setKPositionGain(const Eigen::Vector3d &PositionGain){
         position_gain_ = PositionGain;
     }
@@ -122,6 +124,7 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
     std::vector<float> getObs();
+    double computeCbeta();
 
     // UAV Parameter
     double _uav_mass;
@@ -149,7 +152,8 @@ private:
     double r_yaw_rate;
 
     // Trigger
-    float trigger_;
+    float pilot_trigger_;
+    float iffs_trigger_;
     bool include_trigger_;
 
     // Policy Variables

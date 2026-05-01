@@ -18,4 +18,6 @@
       actuator_control_topic: "/fmu/in/actuator_motors"
       rates_setpoints_topic: "/fmu/in/vehicle_rates_setpoint"
       mocap_topic: "/fmu/in/vehicle_mocap_odometry"
+      pilot_trigger_topic: "command/trigger/pilot"
+      iffs_trigger_topic: "command/trigger/iffs"
       trigger_topic: "command/trigger"

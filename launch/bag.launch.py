@@ -4,7 +4,9 @@ def generate_launch_description():
     return launch.LaunchDescription([
         launch.actions.ExecuteProcess(
             cmd=['ros2', 'bag', 'record', 
-                '/command/trigger',
+                # '/command/trigger',
+                '/command/trigger/iffs',
+                '/command/trigger/pilot',
                 '/command/pose',
                 '/fmu/out/vehicle_odometry',
                 '/fmu/out/vehicle_control_mode',
