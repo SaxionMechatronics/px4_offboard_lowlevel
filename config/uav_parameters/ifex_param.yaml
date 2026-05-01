@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     uav_parameters:
-      mass: 3.1                    # Kg
+      mass: 3.46285                # Kg
       arm_length: 0.25             # m
       num_of_arms: 4
       inertia:                     # Kg.m^2
