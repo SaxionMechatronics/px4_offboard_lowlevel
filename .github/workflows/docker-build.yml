@@ -35,6 +35,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Move Docker data-root to build volume
+        run: |
+          sudo systemctl stop docker
+          sudo mkdir -p /home/runner/work/docker
+          echo '{"data-root":"/home/runner/work/docker"}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl start docker
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
