@@ -1,2 +1,5 @@
+.github/
 .vscode/
 build/
+install/
+log/
