@@ -22,9 +22,6 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Maximize build space
         # PX4 + Gazebo build requires ~20 GB; default runner has ~14 GB free
         uses: easimon/maximize-build-space@v10
@@ -34,6 +31,9 @@ jobs:
           remove-haskell: "true"
           remove-codeql: "true"
           root-reserve-mb: 4096
+
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
