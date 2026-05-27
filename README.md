@@ -16,6 +16,10 @@ This videos below shows a simulated quadrotor controlled with this package with 
 ![Direct-Actuator-commands](./instructions/media/iris-sitl-act-cmds-harmonic.gif)
 
 # Contents
+## Dev Container Setup
+Guide on setting up the development environment using VS Code Dev Containers.
+[View Dev Container Setup Instructions](instructions/devcontainer_setup.md)
+
 ## Package Setup
 Guide on the installation of the low level controller package and its dependencies. 
 [View Package Setup Instructions](instructions/package_setup.md)
