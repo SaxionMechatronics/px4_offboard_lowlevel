@@ -1,9 +1,6 @@
 {
   "name": "PX4 Offboard Low-Level",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
+  "image": "ghcr.io/saxionmechatronics/px4_offboard_lowlevel:drone-minor",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "customizations": {
     "vscode": {
