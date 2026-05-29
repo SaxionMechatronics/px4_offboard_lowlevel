@@ -61,7 +61,19 @@ Once complete, the bottom-left corner of VS Code will show **Dev Container: PX4 
 
 ---
 
-## Step 4 Launch the simulation
+## Step 4 (Linux only) Allow GUI access
+
+Before launching the simulation, run this once in a **host terminal** (not inside VS Code):
+
+```bash
+xhost +local:docker
+```
+
+> **Windows (WSL2) and macOS users can skip this step** — display forwarding is handled automatically.
+
+---
+
+## Step 5 Launch the simulation
 
 Open a terminal inside VS Code and run the following commands, each in a **separate terminal tab**:
 
